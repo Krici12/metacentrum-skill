@@ -1,0 +1,13 @@
+{
+  "name": "metacentrum-skill",
+  "owner": {
+    "name": "Vlastimil Kricnar"
+  },
+  "plugins": [
+    {
+      "name": "metacentrum",
+      "source": "./",
+      "description": "e-INFRA CZ / MetaCentrum practical reference: PBS/qsub, GPU nodes, JupyterHub, Kubernetes/Rancher, storage, auth, AI as a Service."
+    }
+  ]
+}

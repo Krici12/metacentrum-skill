@@ -1,15 +1,31 @@
 # e-INFRA CZ / MetaCentrum — Dokumentace (zrcadlo)
 
 Gitový repozitář se zdrojem pravdy pro **dokumentaci e-INFRA CZ / Metacentra**,
-určený jako strojově čitelná referenční příručka (pracovní podklad pro Claude Code,
-LLM agenty a re-scrapování a diffování přes git).
+určený jako strojově čitelná referenční příručka — a zároveň **plugin marketplace
+pro Claude Code** se skillem `metacentrum`.
 
 - **naposledy scrapnuto:** 2026-09-10
 - **zdroje:** [docs.e-infra.cz](https://docs.e-infra.cz) a návazné dokumentační weby e-INFRA CZ
 
+## Instalace jako plugin (Claude Code)
+
+Toto repo je zároveň **plugin marketplace** — instalace jedním příkazem:
+
+```bash
+claude plugin marketplace add Krici12/metacentrum-skill
+claude plugin install metacentrum@metacentrum-skill
+```
+
+nebo interaktivně v Claude Code: `/plugin marketplace add Krici12/metacentrum-skill`
+a poté `/plugin install metacentrum@metacentrum-skill`.
+
+Po instalaci se skill `metacentrum` automaticky aktivuje, když se zeptáš na
+cokoli o MetaCentru / e-INFRA CZ (PBS joby, GPU, kvóty, Kerberos, JupyterHub,
+Kubernetes, S3, AI as a Service…).
+
 ## Autorství a licence obsahu
 
-Skill v `.claude/skills/metacentrum/` je původní, ručně psaný kondenzát.
+Skill v `skills/metacentrum/` je původní, ručně psaný kondenzát.
 
 Obsah `raw/` je **zrcadlem veřejné dokumentace** provozované CESNET / MetaCentrum /
 CERIT-SC ([docs.e-infra.cz](https://docs.e-infra.cz),
@@ -25,8 +41,9 @@ námitky proti zrcadlení, otevřete issue.
 
 | Cesta | Obsah |
 |-------|-------|
+| `skills/metacentrum/` | Skill `metacentrum`: stručný `SKILL.md` + praktické příručky `references/<téma>.md` odvozené z `raw/`. |
+| `.claude-plugin/` | Manifesty pluginu a marketplace (`plugin.json`, `marketplace.json`). |
 | `raw/` | **Syrový** scrapnutý obsah (markdown) zrcadlící strukturu webu. Neupravuj ručně — zdroj pravdy pro re-scrap. |
-| `.claude/skills/metacentrum/` | Skill `metacentrum`: stručný `SKILL.md` + praktické příručky `references/<téma>.md` odvozené z `raw/`. |
 | `scripts/` | Skripty pro scrapování (`scrape.py`, `extract.py`) a aktualizaci. |
 | `SCRAPING.md` | Návod, jak obsah re-scrapnout a aktualizovat. |
 | `STRUCTURE.md` | Mapa struktury webu a co kterou sekcí pokrýváme. |
@@ -55,7 +72,7 @@ python3 scripts/scrape.py --fresh
 ## Struktura skillu `metacentrum`
 
 ```
-.claude/skills/metacentrum/
+skills/metacentrum/
 ├── SKILL.md              # frontmatter + navigace k references/ (krátký)
 └── references/
     ├── pbs-qsub.md       # PBS Pro: qsub, fronty, walltime, příkazy

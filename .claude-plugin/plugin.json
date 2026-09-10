@@ -1,0 +1,12 @@
+{
+  "name": "metacentrum",
+  "description": "Practical reference guide for e-INFRA CZ / MetaCentrum infrastructure: PBS/qsub batch jobs, queues, walltime, software modules, GPU nodes, JupyterHub, OnDemand, Kubernetes/Rancher, data storage (S3), Kerberos authentication and AI as a Service (LLM API, coding assistants).",
+  "version": "0.1.0",
+  "author": {
+    "name": "Vlastimil Kricnar"
+  },
+  "homepage": "https://github.com/Krici12/metacentrum-skill",
+  "repository": "https://github.com/Krici12/metacentrum-skill",
+  "license": "MIT",
+  "keywords": ["metacentrum", "e-infra", "hpc", "pbs", "qsub", "kubernetes", "jupyterhub", "gpu", "czech"]
+}

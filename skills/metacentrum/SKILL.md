@@ -39,6 +39,7 @@ Praktická referenční příručka pro práci s infrastrukturou **MetaCentrum**
 - **AIaaS** = on-premise LLM platforma e-INFRA CZ (`llm.ai.e-infra.cz`,
   `chat.ai.e-infra.cz`) — OpenAI-kompatibilní API, chat, AI coding asistenti.
 
-Zdrojový materiál: `raw/` v kořeni repozitáře (syrový scrap oficiální dokumentace).
+Zdrojový materiál: repozitář [Krici12/metacentrum-skill](https://github.com/Krici12/metacentrum-skill)
+(syrový scrap oficiální dokumentace ve `raw/`).
 Pro detaily vždy ověř aktuální čísla (walltime limity, kvóty, fronty) v `references/`
 a `raw/`, protože se mění.
