@@ -1,0 +1,129 @@
+#
+
+Jobs in the cluster require minimal configuration beyond the necessary security context. A sample configuration is provided for your convenience. To use this example, modify the following fields according to your needs:
+
+- Job name in section `metadata.name`
+
+- Labels (Optional)
+
+- Sections `metadata.labels` and `spec.template.metadata.labels` (you can include multiple key-value pairs in both)
+
+- See the section below on label usage to determine whether to include them
+
+- Restart Policy
+
+- Section `spec.template.spec.restartPolicy`
+
+- Can be `Never` or `OnFailure`; each option has specific meanings, and we strongly recommend checking the [official documentation](https://kubernetes.io/docs/concepts/workloads/controllers/job/#completion-mode)
+
+- Container Image
+
+- Section `spec.template.spec.containers[].image` (an array; you can include multiple containers)
+
+- If you lack a pre-prepared image, create your own using our [Docker documentation](../docker/dockerfile), which provides guidance on creating functional images
+
+- Contact us with any questions about container image creation
+
+- User
+
+- Section `spec.template.spec.containers[].securityContext.runAsUser` (set this for each container)
+
+- Your container image might use a different user ID than `1000`
+
+- Resource Requests
+
+- Section `spec.template.spec.containers[].resources`
+
+- Define requests and limits for CPU and memory
+
+- Optionally, request a GPU according to the [GPU documentation](../kubernetes/resources#gpu)
+
+- Volumes and Volume Mounts
+
+- Volumes
+
+- Section `spec.template.spec.volumes[]` (an array; multiple volumes can exist)
+
+- An array of **all** volumes that can be mounted to the Job’s containers
+
+- Volumes can be of [many types](https://kubernetes.io/docs/concepts/storage/volumes/#volume-types); the most frequently used are `PersistentVolumeClaim`, `ConfigMap`, and `Secret`
+
+- Volume Mounts
+
+- Section `spec.template.spec.containers[].volumeMounts[]` (an array; multiple volume mounts can exist)
+
+- An array of volumes to mount in a specific container (define this for each container individually)
+
+- Only volumes listed in `spec.template.spec.volumes[]` can be mounted in containers
+
+The volume name in section `spec.template.spec.volumes[]` matches the `name` field when specifying a volume mount.
+
+```
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: secure-job-name
+spec:
+  template:
+    metadata:
+      labels:
+        app: secure-job
+    spec:
+      securityContext: # Pod security context
+        fsGroupChangePolicy: OnRootMismatch
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: secure-container
+        image: nginx:latest
+        securityContext: # Container security context
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          runAsUser: 1000
+        resources: # Resource requests and limits
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        volumeMounts: # Volume mount for the container
+        - name: config-volume
+          mountPath: /etc/config
+          readOnly: true
+      restartPolicy: Never
+      volumes: # Volumes definition
+      - name: config-volume
+        configMap:
+          name: example-configmap
+
+```
+
+Additional configuration options are available. We recommend consulting the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/job/) for a complete explanation of the Job object and its capabilities.
+
+## [A Word on Labels](#a-word-on-labels)
+
+Label fields (`metadata.labels`, `spec.template.metadata.labels`) are optional but recommended for better resource organization.
+
+More on `metadata.labels`:
+
+- These labels apply to the Job itself and organize Job objects, simplifying job identification and filtering via command line (e.g., `kubectl get jobs --selector`) or programmatically
+
+More on `spec.template.metadata.labels`:
+
+- When Kubernetes creates a Pod for the Job, the Pod inherits labels from `spec.template.metadata.labels`, simplifying Pod identification and filtering via command line (e.g., `kubectl get pods --selector`) or programmatically
+
+- Labels help organize resources logically; for example, label all resources belonging to a specific application or environment
+
+- Some Kubernetes features (such as `Network Policies`, `Services`, or monitoring systems) rely on labels to identify applicable Pods; without labels, these features may not function correctly
+
+- Jobs, Deployments, and other higher-level controllers typically use labels in their templates to maintain consistency across created resources
+
+![publicity banner](/_next/static/media/einfra_cerit-zapati.04hjcx2t12mah.svg)
+
+### On this page
+[A Word on Labels](#a-word-on-labels)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

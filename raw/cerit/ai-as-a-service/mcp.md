@@ -1,0 +1,41 @@
+#
+
+An **MCP server** is a service that exposes tools, data sources, or capabilities to AI models through a standardized interface. It acts as a bridge between a model and external systems, allowing the model to request information or perform actions in a controlled, structured manner. MCP servers define what a model can access, how requests are handled, and how responses are returned, making integrations predictable and secure.
+
+MCP servers can be used to connect AI models to databases, APIs, file systems, business logic, or other services. By centralizing access and enforcing clear contracts, they enable models to extend their functionality beyond their built-in knowledge while maintaining reliability, safety, and scalability.
+
+## [Available MCP Servers](#available-mcp-servers)
+
+We provide several MCP servers that are available through the [https://llm.ai.e-infra.cz](https://llm.ai.e-infra.cz) API. Each MCP server is accessible at `https://llm.ai.e-infra.cz/[servername]/mcp`, where `[servername]` is the server’s name.
+
+| MCP Server Name |Description |
+| `ddg_search` |Searches the live internet using DuckDuckGo, returning concise, formatted web results. It also fetches, parses, and extracts readable content from a specific webpage URL. |
+| `DocFork` |Searches documentation across GitHub repositories or the web, fetching and returning the full content of a documentation page as markdown. |
+| `k8scerit` |Generates example manifests for supported Kubernetes resources, validates Kubernetes YAML manifests, and patches manifests based on best practices. All manifests are suitable for CERIT‑SC Kubernetes. |
+| `npmjs` |Provides essential package details, lists available package versions along with their respective publish dates, and offers a more comprehensive set of information, including maintainers, repository URL, homepage, and keywords. |
+| `prolog` |Executes a Trealla Prolog query against loaded definitions. |
+| `shadcn` |Provides detailed, structured information about shadcn/ui components to help developers implement them correctly. |
+| `solver` |Provides advanced mathematical calculation capabilities, including symbolic math, statistical analysis, and matrix operations. |
+| `tailwind` |Provides detailed, structured information about Tailwind components to help developers implement them correctly. |
+
+## [Claude Code Integration](#claude-code-integration)
+
+To integrate an MCP server with Claude Code, add its endpoint using this command:
+
+```
+claude mcp add-json tailwind '{"type":"http","scope":"user","url":"https://llm.ai.e-infra.cz/tailwind/mcp","headers":{"Authorization":"Bearer BEARER"}}'
+
+```
+
+Replace `BEARER` with your API token from [https://chat.ai.e-infra.cz](https://chat.ai.e-infra.cz).
+
+Do not add all MCP servers “just in case.” Add only the required servers, as they consume the model’s context.
+
+Internal Web Search and Web Fetch tools in Claude Code work only with the Anthropic API and are therefore not available in this setup. Their functionality can be replaced by the `ddg_search` MCP server.
+
+![publicity banner](/_next/static/media/einfra_cerit-zapati.04hjcx2t12mah.svg)
+
+### On this page
+[Available MCP Servers](#available-mcp-servers)[Claude Code Integration](#claude-code-integration)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

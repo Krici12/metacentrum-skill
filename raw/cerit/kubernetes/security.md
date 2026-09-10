@@ -1,0 +1,140 @@
+#
+
+## [Ingress Authentication](#ingress-authentication)
+
+If you want to use basic auth or OAuth for an Ingress, follow the instructions in the [official documentation](https://kubernetes.github.io/ingress-nginx/examples/auth/basic/) or in [our documentation](./expose).
+
+This approach has a significant security flaw: authentication is only required when connecting via Ingress, for example, from outside the Kubernetes cluster. However, platform users can also connect from inside the cluster directly to the corresponding Service (they would need to guess its IP address). In such cases, no authentication is required.
+
+This flaw can be mitigated using a [Network Policy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) that limits the origin of network traffic. In this case, allow Ingress traffic to the server only from the *kube-system* namespace. The *kube-system* namespace hosts the Ingress NGINX instance, so only connections from this namespace are required.
+
+An example network policy can be [downloaded here](/examples/ceritsc/manifests/netpolicy.yaml). This policy allows Ingress traffic from *kube-system* to a Pod named `myapp`. This policy is applied to the *namespace* where the Pod `myapp` resides.
+
+## [E-infra Single Sign On (BETA)](#e-infra-single-sign-on-beta)
+
+You can use the e-infra SSO service to secure your application. To enable this, add some annotations to the ingress.
+This guide shows how to edit an existing ingress to include SSO.
+
+This example represents an existing ingress:
+
+ingress.yaml
+
+```
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-name
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "hostname.dyn.cloud.e-infra.cz"
+      secretName: hostname-dyn-cloud-e-infra-cz-tls
+  rules:
+  - host: "hostname.dyn.cloud.e-infra.cz"
+    http:
+      paths:
+      - path: /
+        backend:
+          service:
+            name: service-name
+            port:
+              number: port-number
+        pathType: Prefix
+
+```
+
+First, add a few annotations to the ingress:
+
+```
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-name
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
++   nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth?allowed_emails=email1@ics.muni.cz, email2@ics.muni.cz, email3@ics.muni.cz"
++   nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$scheme%3A%2F%2F$host$escaped_request_uri"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "hostname.dyn.cloud.e-infra.cz"
+      secretName: hostname-dyn-cloud-e-infra-cz-tls
+  rules:
+  - host: "hostname.dyn.cloud.e-infra.cz"
+    http:
+      paths:
+      - path: /
+        backend:
+          service:
+            name: service-name
+            port:
+              number: service-port-number
+        pathType: Prefix
+
+```
+
+The `nginx.ingress.kubernetes.io/auth-url` annotation contains a query string that specifies a list of users who can access the website. Only change the list of emails in this field; do not modify the URL in any way.
+
+The other annotation tells the ingress to redirect back to the webpage after the user authenticates.
+
+Now that the Ingress is configured to use an SSO endpoint, configure the SSO endpoint itself by applying the following YAML file:
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-name-oauth
+spec:
+  type: ExternalName
+  externalName: oauth2-proxy.kube-system.svc.cluster.local
+  ports:
+  - name: http
+    port: 4180
+    protocol: TCP
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-name-oauth
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  kubernetes.io/ingress.class: "nginx"
+  tls:
+    - hosts:
+        - "hostname.dyn.cloud.e-infra.cz"
+      secretName: hostname-dyn-cloud-e-infra-cz-tls
+  rules:
+  - host: "hostname.dyn.cloud.e-infra.cz"
+    http:
+      paths:
+      - path: /oauth2
+        backend:
+          service:
+            name: ingress-name-oauth
+            port:
+              number: 4180
+        pathType: Prefix
+
+```
+
+Note that the `hosts` and `secretName` values match those in the original Ingress.
+Replace all occurrences of `ingress-name` and `hostname` with the name of your Ingress and your website URL, then apply the file.
+
+With all the changes applied, your website is now secured with the e-infra SSO service.
+
+![publicity banner](/_next/static/media/einfra_cerit-zapati.04hjcx2t12mah.svg)
+
+### On this page
+[Ingress Authentication](#ingress-authentication)[E-infra Single Sign On (BETA)](#e-infra-single-sign-on-beta)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

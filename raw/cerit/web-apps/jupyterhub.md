@@ -1,0 +1,709 @@
+#
+
+**JupyterHub** is an open-source platform designed to provide multi-user access to Jupyter Notebook environments.
+It allows to manage and scale the deployment of interactive computational environments for multiple users, making it ideal for educational institutions, research labs, and enterprises that need to support collaborative data science and scientific computing.
+
+**JupyterLab / Jupyter Notebooks** are web applications that enable you to create and share documents containing live code, equations, visualizations, and narrative text. They are widely used in data analysis, machine learning, and other computational tasks due to their interactive nature and ability to combine code execution with rich text explanations.
+
+## [Accessing JupyterHub](#accessing-jupyterhub)
+
+To access JupyterHub on the [hub.cloud.e-infra.cz](https://hub.cloud.e-infra.cz/) platform, you must be a valid member of MetaCentrum.
+
+## [Starting JupyterLab / Jupyter Notebook](#starting-jupyterlab--jupyter-notebook)
+
+### [Starting Server](#starting-server)
+
+To launch a default JupyterLab environment, simply click on the `My Server` button.
+If you prefer to create a custom JupyterLab with a personalized name, follow these steps:
+
+- Choose short, unique and descriptive name for your server to ensure easy identification.
+
+- Click on `Add new server` to proceed with the creation of your customized JupyterLab environment.
+
+### [Choosing Image](#choosing-image)
+
+We provide a range of pre-configured Docker images to accommodate various computational requirements:
+
+- **Simple Jupyter Images**, including versions that support AI-powered chat assistance to aid with coding tasks
+
+- **R Images**, which enable you to use different versions of RStudio, also featuring AI capabilities
+
+- **TensorFlow and Pytorch Images**, optimized for machine learning and deep learning applications
+
+- **Matlab Images**, allowing you to access a graphical, interactive instance of Matlab
+
+- **Folding images**, specifically designed for special use cases involving Colabfold or ESM Fold
+
+- Image with integrated **Claude Code**, AI-powered advanced chat assistance
+
+- Alternatively, you can also use your own **custom image**
+
+>
+
+You can choose to build your own image with all dependencies and sotware you need. However, don’t forget to include whole jupyter stack, otherwise the the deployment will not work. We recommend building from [existing image](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html) which already incorporates all nexessary software. If you choose custom image, you have to provide image name together with its repo and optional tag --- input text in format `repo/imagename:tag`. If you build your own image, you have to make sure repository is public. If you don’t know what repository to choose, we maintain our own docker registry which you can freely use and does not require any further configuration. More information on registry is available [at a harbor site](../docker/harbor).
+
+### [Choosing Storage](#choosing-storage)
+
+#### [Default Persistent Storage](#default-persistent-storage)
+
+By default, every notebook runs with persistent storage mounted to `/home/jovyan`. Therefore, we recommend to save the data to `/home/jovyan` directory to have them accessible every time notebook is spawned.
+
+You can create a new one or choose to mount any already existing storage (to /home/jovyan) instead of creating a new one which enables sharing data across spawns and instances.
+However, you can choose to delete existing storage which will result in losing all the data from it.
+
+#### [MetaCentrum Home Integration](#metacentrum-home-integration)
+
+You can mount your MetaCentrum home directory or project directory to access your files. Please select the desired home from the available options. Note that currently, only one home directory can be mounted per notebook. In the hub, your home directory is located in `/home/meta/{meta-username}`.
+
+❗️ If you choose storage where you do NOT have a home directory, the spawn process
+will fail. Please, make sure you are choosing storage where your home exists. If you are not sure about home location, contact [IT Service desk](mailto:k8s@cerit-sc.cz) who will help.
+
+### [Resource Allocation](#resource-allocation)
+
+Each Jupyter notebook can request 3 types of resources --- CPU, memory, GPU --- up to the set limit. Because we want to support effective computing, we have implemented a simple shutdown mechanism that applies to each notebook instance. Please, read the mechanism description below.
+
+#### [CPU](#cpu)
+
+You are guaranteed **1 CPU** and can request up to **32 CPU** limit. Resource limits represent a hard limit which means you can’t use more than set amount for that specific instance. If computation inside notebook requires more CPUs than assigned, it will not be killed but throttled --- the computation will continue, perhaps just slower.
+
+#### [Memory](#memory)
+
+You are guaranteed **4G of RAM** and can request up to **256G of RAM**. Resource limits represent a hard limit which means you can’t use more than set amount for that specific instance. If computation inside notebook consumes more memory than assigned, it will be killed. The notebook will not disappear but the computation will either error or abruptly end.
+
+#### [GPU](#gpu)
+
+It is possible to utilize GPU in your notebook, you can request whole GPU or MIG GPU.
+
+-
+
+For whole GPU, **using GPU requires particular setting (e.g. drivers, configuration) so it can be effectively used only in images with GPU support.** (marked as `...with GPU...` in the selection menu). If you assign GPU with any other image, it will not be truly functional.
+
+-
+
+For MIG GPU, see [NVIDIA MIG](https://www.nvidia.com/en-us/technologies/multi-instance-gpu/) documentation about MIG technology. It is possible to request up to 4 parts of 10GB MIG of NVIDIA A100/80GB card using `10GB part A100` option and up to 4 parts of 20GB MIG of NVIDIA A100/80GB card using `120GB part A100` optino. GPU memory is HW limited so there is no problem that someone else could overutilize requested amount of the resource. Individual MIG parts (up to 4) act as isolated GPUs so to utilize more than one MIG part, multi-GPU computation has to be setup in an application.
+
+-
+
+Actually free GPU resources are shown for information.
+
+## [Working in JupyterLab environment](#working-in-jupyterlab-environment)
+
+### [Using RStudio](#using-rstudio)
+
+- Go to [hub.cloud.e-infra.cz](https://hub.cloud.e-infra.cz).
+
+- Select the **RStudio-AI** image (*version 4.6.1 with Posit Assistant support*).
+
+- Configure your required server resources and click **Start**.
+
+![RStudio launcher](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Frstudio-click.3t-6-egkywtm5.png&w=3840&q=75)
+
+- Once the environment finishes loading, RStudio will open automatically.
+
+**Setting Up Posit Assistant**
+
+- In the top-right corner of the RStudio interface, click the **Posit Assistant** button.
+
+![Posit Assistant location in RStudio](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Frstudio.2rftm7wysem5g.png&w=3840&q=75)
+
+- Click **Install Posit Assistant**.
+
+![Install Posit Assistant interface](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Frstudio-positassistant1.1kwxqc0dz2a1x.png&w=3840&q=75)
+
+- When prompted, select **Trust Workspace** to proceed.
+
+![Trust workspace confirmation dialog](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Frstudio-positassistant2.0t_9s70vz0kcx.png&w=3840&q=75)
+
+- Configure your preferred model:
+
+- Click the **three dots** icon (**`...`**) in the bottom-left corner (Assistant panel).
+
+- From the dropdown menu, select your desired model under the **OpenAI Compatible** category.
+
+- *Recommendation:* We suggest using either **mini** or **GPT-OSS-120B**.
+
+![Selecting OpenAI Compatible category](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Frstudio-vybermodelu1.1vx09phggck3q.png&w=3840&q=75)
+
+![Choosing the recommended model](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Frstudio-vybermodelu2.3apgqaz28spp2.png&w=3840&q=75)
+
+### [Using Matlab](#using-matlab)
+
+- Go to [hub.cloud.e-infra.cz](https://hub.cloud.e-infra.cz).
+
+- Select the **Matlab** image.
+
+- Configure your required server resources and click **Start**.
+
+![lab](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fmatlab.14sybn0dhzv1s.png&w=3840&q=75)
+
+### [Other Images](#other-images)
+
+- Go to [hub.cloud.e-infra.cz](https://hub.cloud.e-infra.cz).
+
+- Select an image (python, datascience, from repo, …)
+
+- Configure your required server resources and click **Start**.
+
+![lab](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Flab.0xaed1bl1p6cw.png&w=3840&q=75)
+
+## [Resource Utilization and Shutdown Mechanism](#resource-utilization-and-shutdown-mechanism)
+
+To promote effective computing, unused notebooks may be deleted based on resource usage. We have implemented a simple mechanism that decides if your notebook instance will be deleted. It performs evaluations once a day.
+
+If **at least 1 GPU** was requested, the mechanism checks GPU usage and does not care about CPU usage (GPU is a *more expensive* resource). After 2 days of <0.005 GPU usage, the notebook instance is deleted. The threshold `0.005` was chosen because this number is truly insignificant and means no usage.
+
+If **no GPU** was requested, the mechanism checks only CPU usage. After 4 days of <0.1 CPU usage, the notebook instance is deleted. The threshold was chosen based on data collected by monitoring --- CPU usage below 0.1 suggests that the notebook just exists and no computation is performed.
+
+The mechanism works for both ways as following:
+
+>
+
+Notebook’s CPU usage is measured over 24h and is calculated as the average of notebook CPU usage (in CPU seconds) over 5-minute-long segments. The final maximum is chosen from all segments. If the resulting maximum *equals to zero/under 0.1*, the notebook instance is internally marked with “1” as the first warning. If usage is above 0.1, nothing happens.
+
+Notebook’s GPU usage is measured over 24h and is calculated as the average portion of time graphics engine was active over 5-minute-long segments. The final maximum is chosen from all segments. If the resulting maximum *equals to zero/under 0.005*, the notebook instance is internally marked with “1” as the first warning. If usage is above 0.005, nothing happens.
+
+Next run performs the same but if maximum:
+
+- is still less than 0.1 for CPU (0.005 for GPU), counter is increased by one. If counter reaches `threshold+1` (e.g. for CPU, 5 as 4 days have already passed), instance is deleted.
+
+- changes from under the threshold above it, the mark is completely removed (you apparently started using notebook again).
+
+- is over the threshold, nothing happens.
+
+### [Low Usage Notification](#low-usage-notification)
+
+If the notebook is marked for deletion, you will receive an e-mail informing about the situation for every warning until instance is truly removed. You will get an e-mail informing about deletion as well. You are not forced to do anything about instance if you receive an email --- if the usage does not go up, it will be deleted. We recommend saving the results or copying them elsewhere if you receive a warning. The email is sent to the address configured in your MetaCentrum account as a preferred address.
+
+## [Managing JupyterHub](#managing-jupyterhub)
+
+All of your named server are accessible under `Hub Control panel` where you can manipulate with them (create, delete, log in to).
+
+Whenever you need to manage your notebooks from JupyterLab environmnent, start JupyterHub environment accessing `File` → `Hub Control Panel` in the top left corner.
+Here you can add new notebooks, stop, or delete them.
+
+Alternatively, you can manage running instances at [https://hub.cloud.e-infra.cz/hub/home](https://hub.cloud.e-infra.cz/hub/home).
+
+### [Deleting JupyterNotebook Instance](#deleting-jupyternotebook-instance)
+
+In the top left corner, go to `File ` → `Hub Control Panel`. If you have multiple instances, click on `Stop` next to the instance name you want to delete. Wait till blue button `Delete` appears and click on it. If you have only one server, there will be big `Stop My Server` button in the upper part of the page. Click on it. In a couple of seconds, your container notebook instance will be deleted (stop button disapperas). If you need to spin notebook instance again, fill in the `Server name` and click on `Add new server`, you will be presented with input form page.
+
+### [Add Servers](#add-servers)
+
+JupyterHub allows spawning more than one notebook instance; actually you can run multiple instances of various images at the same time. To do so, in the top left corner, go to `File` → `Hub Control Panel`. Fill in the `Server name` and click on `Add new server`, you will be presented with input form page.
+
+![add1](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fadd1.41g356zj4nb02.png&w=3840&q=75)
+![add2](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fadd2.1krr55lhql7b5.png&w=3840&q=75)
+
+### [JupyterNotebook Sharing](#jupyternotebook-sharing)
+
+If you want to share a notebook with another user or use it from another browser session, you need to open `Hub Control Panel` as can be seen below:
+
+![control](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Ftoken1.1fvm_k_yx-vpl.png&w=3840&q=75)
+
+Then select the `Token` menu:
+
+![token](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Ftoken2.1o8q8u6bmit93.png&w=3840&q=75)
+
+Then put a name for the token (arrow 1 below), hit `Request new API token` button (arrow 2 below), and you will see the token (arrow 3 below):
+
+![token2](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Ftoken3.3nvtcvtelw9ja.png&w=3840&q=75)
+
+Check the current URL in your browser, it should look like:
+
+![url](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Ftoken4.3azrmj6z956iz.png&w=3840&q=75)
+
+Copy the URL, from the very beginning to the `lab`, including the `lab`, e.g., select the part: `hub.cloud.e-infra.cz/user/xhejtman/AI/lab`. Extend this URL with token as follows:
+
+![urltoken](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Ftoken5.0nn_w_o4-osvq.png&w=3840&q=75)
+
+I.e., add `?token=86c4dc52fa4e4d6298c4ba7d008fc085` (with your token instead of the `86c4dc52fa4e4d6298c4ba7d008fc085`). Send it to friend or open it in another browser.
+
+The URL will be redirected so that the part `?token=XXX` is hidden, so you will not be able to copy it again once displayed in the browser.
+
+The token is valid for all your running notebooks, not just for a particular notebook. So be careful when sharing.
+
+The user who wants to use the share link with the token must not be logged in, e.g., must use an incognito browser window.
+
+## [Exposing Local Applications](#exposing-local-applications)
+
+Flare tunnel allows you to expose your local applications on the domain `flare.cloud.e-infra.cz`.
+
+Creating a tunnel:
+
+- Install the Python package for tunnel management:
+
+```
+pip install git+https://github.com/CERIT-SC/flare
+
+```
+
+- Start the application you want to expose.
+
+- Create a tunnel:
+
+```
+flare tunnel --port {port} --name {name}
+
+```
+
+where `{port}` is the port on which your application is running, and `{name}` defines the URL where the application will be accessible.
+
+For example, the following command will expose an application running on port `8888` at the URL `https://myapp.flare.cloud.e-infra.cz`:
+
+```
+flare tunnel --port 8888 --name myapp
+
+```
+
+## [Special Features](#special-features)
+
+Any tips for features or new notebook types are welcomed at [IT Service desk](mailto:k8s@cerit-sc.cz).
+
+### [Conda Environment](#conda-environment)
+
+Conda is supported in all provided images and is activate using `conda init`. New conda environment terminal is created in notebook’s terminal with command `conda create -n tenv --yes python=3.8 ipykernel nb_conda_kernels` (`ipykernel nb_conda_kernels` part is required, alternatively irkernel).
+
+![moveenv](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fmove_env.0g5_l5xkf9-h2.png&w=3840&q=75)
+
+Check if environment is installed with `conda env list`. You can use the environment right away, either by creating new notebook or changing the kernel of existing one (tab `Kernel` → `Change Kernel...` and choose the one you want to use).
+
+![checkenv](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fcheck_env.3uz73cds0mj2j.png&w=3840&q=75)
+![selenv](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fselect_env.001r86zhps3yd.png&w=3840&q=75)
+
+#### [Install Conda Packages](#install-conda-packages)
+
+To install conda packages you have to create new conda environment (as described above). Then, install new packages in terminal into newly created environment e.g. `conda install keyring -n myenv`.
+
+Open new notebook and change the kernel in tab `Kernel` → `Change Kernel...` → `myenv` (or the nemae of kernel you installed packages into).
+
+### [Notebook Intelligence Support in Jupyter Notebooks](#notebook-intelligence-support-in-jupyter-notebooks)
+
+Our platform offers specialized Jupyter Notebook images pre-configured with Generative AI capabilities. These images are designed to streamline your workflow by embedding coding assistants directly into your environment.
+
+When spawning a new server, look for images marked with the AI tag (e.g., Minimal NB AI, Datascience NB AI). These images contain the necessary dependencies and pre-configured extensions to communicate with our internal LLM infrastructure.
+
+**Currently Integrated Notebooks**
+
+The `Minimal NB with AI` is a lightweight environment that comes with the official Jupyter AI extension pre-installed. This integration provides a powerful interface for interacting with Large Language Models (LLMs) directly from your notebook cells or via a dedicated chat panel.
+
+![Minimal NB with AI](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fjupyter-intelligence.18-lyuklp1jaj.png&w=3840&q=75)
+
+- Chat Interface: A sidebar chat assistant (Jupyternaut) that can answer questions, generate snippets, and learn from your local files.
+
+- For a full guide on syntax and capabilities, please refer to the official [Jupyter AI documentation](https://jupyter-ai.readthedocs.io/en/latest/).
+
+Security Notice: Your data is secure. All processing is performed using our internal LLM platform. No code or data is sent to public API endpoints.
+
+## [Claude Code Integration](#claude-code-integration)
+
+Claude Code is not just a chatbot; it is an agentic coding assistant. It can read your notebook, analyze your data structures, and navigate your file system to assist with complex tasks—from data cleaning pipelines to visualization and debugging. This integration fully supports “Vibe Coding.”
+
+Security Notice: Your data is secure. All processing is performed using our internal LLM platform. No code or data is sent to public API endpoints.
+
+To maintain safety and stability, Claude Code is designed with a “Human-in-the-loop” philosophy.
+
+- Claude Code is restricted from automatically executing Notebook cells. While it can write, modify, or refactor code, it operates on a permission-first basis. You will be prompted to explicitly approve the execution of any code it suggests.
+
+- For certain file operations or system-level changes, the agent may pause and request your permission. You may be asked to explicitly “add rights” or approve an action before Claude proceeds. This prevents the AI from accidentally modifying critical files without your oversight.
+
+**Cloud Code inactivity**: Please be aware that Cloud Code integration relies on browser-based storage. In the event of a session timeout due to inactivity or if the browser window is closed, this context may be purged, causing the assistant to become unresponsive in Jupyter Notebook, RStudio, or VS Code.
+
+Solution: Navigate to the **JupyterHub dashboard**, explicitly **Stop** the running server, and **Start a new instance** to restore functionality.
+
+### [Claude Code in Jupyter Notebook](#claude-code-in-jupyter-notebook)
+
+This guide outlines the steps to launch and initialize the Claude Code AI assistant within the JupyterNotebook.
+
+Supported image: `DataScience NB AI`
+
+To access Claude Code, you must start your session using the specific custom image that contains the necessary AI dependencies.
+
+-
+
+Log in to your JupyterHub dashboard [hub.cloud.e-infra.cz](https://hub.cloud.e-infra.cz/), start a new server
+
+-
+
+Select Image:
+
+```
+DataScience NB AI
+
+```
+
+![Minimal NB with AI](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fclaude-image.08_u4q1dovbyx.png&w=3840&q=75)
+
+It is recommended to run Claude Code within a specific project context to help it understand your file structure.
+
+See our [e-INFRA CZ Blog](https://blog.cerit.io/blog/claude-jupyter/) for more information and examples.
+
+![Minimal NB with AI](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fclaude-example1.0hlx_r7ep2f3r.png&w=3840&q=75)
+
+### [Claude Code Integration in RStudio](#claude-code-integration-in-rstudio)
+
+This guide outlines the steps to launch and initialize the Claude Code AI assistant within the RStudio environment on JupyterHub.
+
+Supported image: `cerit.io/hubs/rstudio:4.5.2-ai`
+
+To access Claude Code, you must start your session using the specific custom image that contains the necessary AI dependencies.
+
+-
+
+Log in to your JupyterHub dashboard [hub.cloud.e-infra.cz](https://hub.cloud.e-infra.cz/), start a new server
+
+-
+
+Select Custom Image:
+
+```
+cerit.io/hubs/datasciencenb:2026-01-23-ai
+
+```
+
+![rstudio](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Frstudio-image.2u3l7t9zmsn6p.png&w=3840&q=75)
+
+It is recommended to run Claude Code within a specific project context to help it understand your file structure.
+
+**Initialize a New Project**
+
+-
+
+Once RStudio loads, go to File -> New Project
+
+-
+
+Choose New Directory -> New Project
+
+-
+
+Name your directory and ensure it is created in your Home
+
+-
+
+Click Create Project
+
+**Activate Claude Code**
+
+-
+
+Locate the Terminal tab in RStudio
+
+-
+
+Type the following command and press Enter:
+
+```
+claude
+
+```
+
+- Upon running the command, Claude may ask for permissions or authentication. Follow the on-screen prompts and confirm all requests (e.g., allowing device code login or accepting terms).
+
+![rstudio](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Frstudio-claude2.0bwgnk8eha_4r.png&w=3840&q=75)
+
+### [Claude Code Integration in VSCode](#claude-code-integration-in-vscode)
+
+To access Claude Code, you must start your session using the specific custom image that contains the necessary AI dependencies.
+
+-
+
+Log in to your JupyterHub dashboard [hub.cloud.e-infra.cz](https://hub.cloud.e-infra.cz/), start a new server
+
+-
+
+Select Image
+
+-
+
+Set LLM integration - see [LLM integration](/docs/ai-as-a-service/llm-integration)
+
+## [Building Own Image](#building-own-image)
+
+The best and easiest way for building custom image is to base minimal notebook from jupyterhub `jupyter/minimal-notebook:hub-4.0.2` and do necessary changes. Source for our Minimal notebook can be found [here](/examples/ceritsc/jupyterhub/Dockerfile-minimal).
+
+If for any reason, it is not desired to source this minimal notebook, you can create a new one from any base, but make it sure it is ready to run as notebook:
+
+- Install `jupyterlab` package
+
+- Add [start-notebook.py](/examples/ceritsc/jupyterhub/start-notebook.py), [start-notebook.sh](/examples/ceritsc/jupyterhub/start-notebook.sh), [start-singleuser.py](/examples/ceritsc/jupyterhub/start-singleuser.py), [start-singleuser.sh](/examples/ceritsc/jupyterhub/start-singleuser.sh), [start.sh](/examples/ceritsc/jupyterhub/start.sh) files to `/usr/local/bin` and make them executable `chown a+rx start*`
+
+- Make sure, that these `start` files are not eddited on Windows and having Windows new lines. Google for solution by requesting: windows vs unix newline.
+
+## [SSH Access to JupyterNotebook](#ssh-access-to-jupyternotebook)
+
+SSH access works only from IPv6 enabled networks. It will not work from IPv4 only network — most home networks, you usually will need to use VPN service such as Edu VPN.
+
+It is possible to enable SSH access at notebook startup, you need to use an image that contains `sshd` with correct settings, currently `Minimal NB with SSH access` image is available.
+
+As shown below, ssh enpoint address will be displayed, `jovyan@jupyter-xhejtman---54est.dyn.cloud.e-infra.cz` in this example. Write this address because Jupyterhub UI will not display this address again. It can be obtained by `kubectl get svc -n jupyterhub-[yourlogin]-prod-ns -o yaml | grep external-dns.alpha.kubernetes.io/hostname`, if the `kubectl` tool is installed in the notebook.
+
+![ssh](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fssh.1ym-vr8fa7iy8.png&w=3840&q=75)
+
+### [SSH Keys](#ssh-keys)
+
+Additionally, you need to add your (from your laptop) *public* ssh key into the Jupyter Notebbok, into the file `/home/jovyan/.ssh/authorized_keys` file. If the directory `.ssh` does not exist in the jovyan home, create it using `mkdir .ssh`. Do not omit the dot at the beginning of the name. Also note, `ls` does not display doted files, to see `.ssh` directory, you need to use `ls -a`.
+
+If you don’t have ssh key-pair generated on your laptop, you can use command `ssh-keygen -b 4096 -t rsa`. Generated keys will be saved in `[HOME]/.ssh/id_rsa` (private part) and `[HOME]/.ssh/id_rsa.pub` (public part).
+
+After adding the public ssh key into Jupyter Notebook home, check if `sshd` process is running by running `ps -fax`. This command will display currently running processes, similar to
+
+```
+    PID TTY      STAT   TIME COMMAND
+    163 pts/1    Ss     0:00 /bin/sh
+    169 pts/1    R+     0:00  \_ ps -fax
+      1 ?        Ss     0:00 dumb-init start-notebook.sh --ServerApp.default_url=/lab --ServerApp.max_body_size=16291456000
+      7 ?        Ssl    0:04 /opt/conda/bin/python3.11 /opt/conda/bin/jupyterhub-singleuser --ip=0.0.0.0 --ServerApp.default_url=/lab --ServerApp.max_body_size=16291456000
+     96 pts/0    Ss+    0:00  \_ /usr/bin/sh -l
+     25 ?        Ss     0:00 sshd: /usr/sbin/sshd [listener] 0 of 10-100 startups
+
+```
+
+If you can’t see `sshd` process running (last line), run command `/usr/sbin/sshd` in the Jupyter Notebook terminal. It is possible you will get warning about OpenSSL version mismatch which should not prevent `sshd` from starting. If you get this warning, check output of `ps -fax` and if `sshd` process is running, everything is functional despite the warning.
+
+At this point, you should be able to connect with ssh similarly to `ssh jovyan@jupyter-xhejtman---54est.dyn.cloud.e-infra.cz`.
+
+The ssh will print warning about changed ssh key sometimes (mainly after restarting the notebook), this is ok, using the SSH key.
+DO NOT IGNORE THIS WARNING WHEN ENTERING A PASSWORD.
+
+### [Creating Own SSH Enabled Image](#creating-own-ssh-enabled-image)
+
+You can easily base our minimal notebook image with the name: `cerit.io/hubs/minimalnb:26-09-2024-ssh`. Or you can create your own from scratch. Follow the guidelines above, how to create own notebook image and additionally install `openssh-server` package.
+
+Put the following configuration into `/etc/ssh/sshd_config.d/sshd.conf` or if your base distribution does not use `/etc/ssh/sshd_config.d` then just to `/etc/ssh/sshd_config`:
+
+sshd.conf
+
+```
+Port 2222
+AddressFamily any
+ListenAddress 0.0.0.0
+ListenAddress ::
+StrictModes no
+PubkeyAuthentication yes
+UsePAM yes
+X11Forwarding no
+PrintMotd no
+TCPKeepAlive yes
+PubkeyAcceptedKeyTypes +ssh-rsa
+
+```
+
+Also remove all `/etc/ssh/ssh_host_*` files in the image.
+
+It is crucial to remove the `ssh_host_*` files from the image and create new files during image start. Otherwise the ssh connection is not secure!
+
+The last step is to edit original `start-notebook.sh` file located in the image in `/usr/local/bin/start-notebook.sh` and add lines:
+
+```
+(export LD_LIBRARY_PATH='';
+ rm -f /etc/ssh/ssh_host_*;
+ for i in rsa dsa ecdsa ed25519; do
+   ssh-keygen -q -f /etc/ssh/ssh_host_${i}_key -N '' -t $i;
+   ssh-keygen -f /etc/ssh/ssh_host_${i}_key.pub;
+ done)
+
+LD_LIBRARY_PATH='' /usr/sbin/sshd
+
+```
+
+the whole file should look like this:
+
+start-notebook.sh
+
+```
+#!/bin/bash
+# Shim to emit warning and call start-notebook.py
+echo "WARNING: Use start-notebook.py instead"
+
+(export LD_LIBRARY_PATH='';
+ rm -f /etc/ssh/ssh_host_*;
+ for i in rsa dsa ecdsa ed25519; do
+   ssh-keygen -q -f /etc/ssh/ssh_host_${i}_key -N '' -t $i;
+   ssh-keygen -f /etc/ssh/ssh_host_${i}_key.pub;
+ done)
+
+LD_LIBRARY_PATH='' /usr/sbin/sshd
+
+exec /usr/local/bin/start-notebook.py "$@"
+
+```
+
+## [Run Job From Notebook](#run-job-from-notebook)
+
+Jupyter Notebooks are great tool for interactive computing but sometimes your scripts can include a portion that is more resource-intensive. In this case, it is preferred to run this portion as a `Job` rather than inside the Notebook. Some of the reasons are:
+
+- You have to allocate a lot of resources for notebook even though most of the time, you don’t need them.
+
+- If the computation is too demanding, you might not be able to interact with the notebook environment because allocated reosurces are consumed by the computation → you can’t interactively analyse the data from the notebook
+
+### [Neccesary Tools](#neccesary-tools)
+
+We are actively working on reducing the amount of steps that must be taken.
+
+To run a job, you need to install a tool `kubectl` inside your notebook.
+For RStudio-based images:
+
+- Open terminal and run
+`curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"`
+
+- If you get error `curl: command not found` then perform
+
+```
+fakeroot apt-get update
+
+```
+
+wait till update finishes
+
+```
+fakeroot apt-get install curl
+
+```
+
+and execute above-mentioned curl again
+
+- Execute
+
+```
+fakeroot install -o rstudio -m 0755 kubectl /usr/local/bin/kubectl
+
+```
+
+- Execute
+
+```
+export KUBERNETES_PORT=tcp://10.43.0.1:443 KUBERNETES_PORT_443_TCP=tcp://10.43.0.1:443 KUBERNETES_PORT_443_TCP_ADDR=10.43.0.1 KUBERNETES_PORT_443_TCP_PORT=443 KUBERNETES_PORT_443_TCP_PROTO=tcp KUBERNETES_SERVICE_HOST=10.43.0.1 KUBERNETES_SERVICE_PORT=443 KUBERNETES_SERVICE_PORT_HTTPS=443
+
+```
+
+- Now you can use `kubectl` to interact with resources in your namespace. Verify with:
+
+```
+kubectl get pods
+
+```
+
+which will return list of your running notebooks.
+
+### [Sharing The Data From Notebook To Job](#sharing-the-data-from-notebook-to-job)
+
+It is probable that you would like to reuse the data (or script) located in your Jupyter Notebook instance in the `Job`. As `Job` is a new object, you must attach the data to it.
+
+Your notebook can mount two different so-called `volumes` that are shareable:
+
+- Your notebook has a persistent volume mounted to `/home/jovyan` (or `/home/rstudio`) which is internally realized by an object called `PersistentVolumeClaim`. This object has a nice feature - it can be reused and mounted to any other Notebook or Job to any path.
+
+- If you chose to mount your metacentrum home (mounted to `/home/meta/[your_meta_username]`), another `PersistentVolumeClaim` object has been created for the home. This object can be reused and mounted to any other Notebook or Job to any path too.
+
+To later use these two objects (`PersistentVolumeClaims` = PVCs) , you need to know their names:
+
+- Find out the name of PVC mounted to `/home/jovyan` (or `/home/rstudio`) by issuing command
+
+```
+kubectl get pvc | awk -v volume=$(df -h | awk '$1 ~ /^147\.251\.6\.218:/ {split($1, a, "/"); print a[length(a)]}') '$3 == volume {print $1}'
+
+```
+
+e.g.
+
+```
+rstudio@jupyter-testuser--pipemaster2:~$ kubectl get pvc | awk -v volume=$(df -h | awk '$1 ~ /^147\.251\.6\.218:/ {split($1, a, "/"); print a[length(a)]}') '$3 == volume {print $1}'
+testuser-home-pipemaster <---- NAME OF THE PVC MOUNTED TO /home/rstudio
+
+```
+
+- Find out the name of PVC mounted to `/home/meta/[your_username]` by issuing two commands:
+2.1 First, see what storage you mounted. If you didn’t mount any meta storage, the output will be empty.
+
+```
+df -h | awk '$NF ~ /^\/home\/meta/ {match($1, /@([^:]+):/, m); print m[1]}'
+
+```
+
+e.g.,
+
+```
+rstudio@jupyter-testuser--pipemaster2:~$ df -h | awk '$NF ~ /^\/home\/meta/ {match($1, /@([^:]+):/, m);
+print m[1]}'
+storage-brno2.metacentrum.cz <---- MOUNTED META STORAGE
+
+```
+
+2.2 Secondly, get the PVC name for metacentrum home by issuing command and matching its name with your chosen storage match with the storage name such as `brno2, brno12, plzen1, ...`
+
+```
+kubectl get pvc | awk '$3 ~ /-data-sshfs$/ {print $1}'
+
+```
+
+e.g.
+
+```
+rstudio@jupyter-testuser--pipemaster2:~$kubectl get pvc | awk '$3 ~ /-data-sshfs$/ {print $1}'
+testuser-brno12-cerit-claim
+testuser-brno2-claim <----  THIS IS THE ONE because mounted meta home is storage-brno2.metacentrum.cz
+
+```
+
+Now you should know the names of the objects that we will use as volume mounts in the next Section on creating the Job itself.
+
+### [Creating The Job](#creating-the-job)
+
+In the `Job`, you will need to provide 4 things:
+
+- Image name to run
+
+- Script/Command to start
+
+- Resources
+
+- Volumes to Mount
+
+#### [Image](#image)
+
+Job must start with some image. You should create a Docker image that will include all necesarry libraries your script requires or software you want to run to process the data.
+
+#### [Script](#script)
+
+Script can be built into the image or you can run script located in the mounted volumes (so from the PVCs we mentioned above).
+
+If you interacted with the Notebook and you saved a script you would like to run as a Job in a path `/home/rstudio` (`/home/jovyan`) or in you meta home, you will be able to run this script in the Job, if the volume is mounted (more below)
+
+#### [Resources](#resources)
+
+You will need to specify what memory and CPU resources your Job needs.
+
+#### [Volumes to Mount](#volumes-to-mount)
+
+You can specify, if you want to mount any of the two PVCs from section above (so persistent home or metahome) to your Job. Generally, it makes sense to mount both (if you use Meta home) because you can directly share the data between Meta home, Notebook and Job. Moreover, the Job can write its outputs to either Meta home or Notebook’s home dir which makes it easier for you to work with outputs (does not require any copying)
+
+## [Error Handling](#error-handling)
+
+You receive *HTTP 500:Internal Server Error* when accessing the URL `/user/your_name`. Most likely, this error is caused by:
+
+- You chose MetaCentrum home you haven’t used before — The red 500 Error is followed by `Error in Authenticator.pre_spawn_start`
+
+- You chose MetaCentrum home you don’t have access to — The red 500 Error is followed by `Error in Authenticator.pre_spawn_start`
+
+- While spawning, `Error: ImagePullBackOff` appears
+
+Solutions:
+
+- Log out and log in back
+
+- You can not access the home even after logging out and back in — you are not permitted to use this particular home
+
+- Clicking on small arrow `Event log` provides more information. Most certainly, a message tagged `[Warning]` is somewhere among all of them and it provides more description. It is highly possible the repo and/or image name is misspelled.
+
+- please wait for 10 minutes
+
+- The service has a timeout of 10 minutes and during this time, it is trying to create all necessary resources. Due to error, creation won’t succeed and after 10 minutes you will see red progress bars with message `Spawn failed: pod/jupyter-[username] did not start in 600 seconds!`. At this point, it is sufficient to reload the page and click on `Relaunch server`.
+
+If you are not sure about how to create an image for your `Job` or have any other questions, contact us at **[k8s@cerit-sc.cz](mailto:k8s@cerit-sc.cz)**.
+
+![publicity banner](/_next/static/media/einfra_cerit-zapati.04hjcx2t12mah.svg)
+
+### On this page
+[Accessing JupyterHub](#accessing-jupyterhub)[Starting JupyterLab / Jupyter Notebook](#starting-jupyterlab--jupyter-notebook)[Starting Server](#starting-server)[Choosing Image](#choosing-image)[Choosing Storage](#choosing-storage)[Default Persistent Storage](#default-persistent-storage)[MetaCentrum Home Integration](#metacentrum-home-integration)[Resource Allocation](#resource-allocation)[CPU](#cpu)[Memory](#memory)[GPU](#gpu)[Working in JupyterLab environment](#working-in-jupyterlab-environment)[Using RStudio](#using-rstudio)[Using Matlab](#using-matlab)[Other Images](#other-images)[Resource Utilization and Shutdown Mechanism](#resource-utilization-and-shutdown-mechanism)[Low Usage Notification](#low-usage-notification)[Managing JupyterHub](#managing-jupyterhub)[Deleting JupyterNotebook Instance](#deleting-jupyternotebook-instance)[Add Servers](#add-servers)[JupyterNotebook Sharing](#jupyternotebook-sharing)[Exposing Local Applications](#exposing-local-applications)[Special Features](#special-features)[Conda Environment](#conda-environment)[Install Conda Packages](#install-conda-packages)[Notebook Intelligence Support in Jupyter Notebooks](#notebook-intelligence-support-in-jupyter-notebooks)[Claude Code Integration](#claude-code-integration)[Claude Code in Jupyter Notebook](#claude-code-in-jupyter-notebook)[Claude Code Integration in RStudio](#claude-code-integration-in-rstudio)[Claude Code Integration in VSCode](#claude-code-integration-in-vscode)[Building Own Image](#building-own-image)[SSH Access to JupyterNotebook](#ssh-access-to-jupyternotebook)[SSH Keys](#ssh-keys)[Creating Own SSH Enabled Image](#creating-own-ssh-enabled-image)[Run Job From Notebook](#run-job-from-notebook)[Neccesary Tools](#neccesary-tools)[Sharing The Data From Notebook To Job](#sharing-the-data-from-notebook-to-job)[Creating The Job](#creating-the-job)[Image](#image)[Script](#script)[Resources](#resources)[Volumes to Mount](#volumes-to-mount)[Error Handling](#error-handling)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

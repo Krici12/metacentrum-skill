@@ -1,0 +1,303 @@
+#
+
+Scratch storage is a **storage for temporary files for running job**:
+
+```
+...                                  # PBS params etc.
+cp -r ~/input_data_dir/ $SCRATCHDIR/ # copy data into a scratch directory
+cd $SCRATCHDIR
+...                                  # run the computing job
+
+```
+
+This storage should be used *only during computations* and should be freed immediately after your job ends.
+
+The location of scratch directory is defined by a system variable `SCRATCHDIR`.
+
+No default scratch
+
+For a batch job, you must set the size and type of scratchdir! There is no default type of scratch.
+
+## [Scratch types](#scratch-types)
+
+We offer the following types of scratch storage:
+
+| Scratch type |PBS resource |Speed |Do data survive end of job? |Note |
+| [Local](#local-scratch) |`scratch_local` |normal |no | |
+| [SSD](#fast-ssd-scratch) |`scratch_ssd` |fast |no | |
+| [in RAM](#scratch-in-ram) |`scratch_shm` |ultra fast |no | |
+| [Shared](#shared-scratch) |`scratch_shared` |fast |no | |
+| [Shared scratch on Bee cluster](#shared-scratch-on-cluster-bee) |`scratch_shared` AND `cl_bee=True` |fast |yes |will be accessible as `scratch.multijob-brno` |
+| [Multijob fast](#multijob-scratch-fast) |`multijob` |fast |yes |in preparation |
+| [Multijob global](#multijob-scratch-global) |`multijob` |slow |yes |in preparation |
+
+### [Local scratch](#local-scratch)
+
+-
+
+PBS resource `scratch_local`
+
+-
+
+submit as: `qsub -I -l walltime=01:00:00 -l select=1:ncpus=1:mem=1gb:scratch_local=400mb`
+
+-
+
+available on every node
+
+-
+
+speed: moderate (HDD disc)
+
+-
+
+the content can be erased by PBS after job’s end
+
+-
+
+choose this type as a default if you have no reason to do otherwise
+
+### [Fast SSD scratch](#fast-ssd-scratch)
+
+-
+
+PBS resource `scratch_ssd`
+
+-
+
+submit as: `qsub -I -l walltime=01:00:00 -l select=1:ncpus=1:mem=1gb:scratch_ssd=400mb`
+
+-
+
+not available on all nodes; see [https://my.metacentrum.cz/machines](https://my.metacentrum.cz/machines) -> choose a node -> search for “Scratch SSD”
+
+-
+
+speed: fast (SSD disc), smaller volume than local HDD scratch
+
+-
+
+the content can be erased by PBS after job’s end
+
+-
+
+choose for jobs where the bottleneck is disc-related operations (applications that create/read a lot of files)
+
+### [Scratch in RAM](#scratch-in-ram)
+
+-
+
+PBS resource `scratch_shm`
+
+-
+
+submit as: `qsub -I -l walltime=01:00:00 -l select=1:ncpus=1:mem=1gb:scratch_shm=true`
+
+-
+
+scratch directory in RAM
+
+-
+
+maximum size of scratch is defined by the mem (memory) parameter
+
+-
+
+speed: ultra fast, but data on scratch do not survive the end/failure of the job
+
+-
+
+remember to choose memory large enough (to hold both data in scratch and the actual memory requirements for the job)
+
+-
+
+use when you need ultra-fast scratch AND when you absolutely don’t care about data from failed/killed/ended jobs
+
+### [Shared scratch](#shared-scratch)
+
+-
+
+PBS resource `scratch_shared`
+
+-
+
+submit as: `qsub -I -l walltime=01:00:00 -l select=1:ncpus=1:mem=1gb:scratch_shared=400mb`
+
+-
+
+network volume shared between all nodes in a given cluster
+
+-
+
+not available on all computational nodes
+
+-
+
+to check for availability on a particular node, go to [https://my.metacentrum.cz/machines](https://my.metacentrum.cz/machines) -> choose a node -> search for “Scratch Shared”
+
+-
+
+speed: read/write operation slower than on local scratch
+
+-
+
+use for jobs spanning multiple compute nodes with parallel I/O operation
+
+### [Multijob scratch fast](#multijob-scratch-fast)
+
+Feature in preparation
+
+This feature is currently in preparation. Estimated release September-October 2026.
+
+-
+
+PBS resource `multijob=[ brno | plzen ]`
+
+-
+
+submit as: `qsub -I -l walltime=01:00:00 -l select=1:multijob=brno`
+
+-
+
+located in `/scratch.multijob-[brno|plzen]/USERNAME/`
+
+-
+
+available only on some nodes
+
+-
+
+fast
+
+-
+
+persistent scratch for independent consecutive jobs working on same data
+
+-
+
+semi-manual setup; user first creates the scratchdir in a selected location, copies the data etc.
+
+-
+
+PBS **does not** create the scratch directory; it only directs the job to the subset of machines that have connection to the already existing scratch either in Brno, or in Plzen
+
+-
+
+suitable for jobs working on large masses of data (databases) which take long to copy to/from storage
+
+### [Multijob scratch global](#multijob-scratch-global)
+
+Feature in preparation
+
+This feature is currently in preparation. Estimated release September-October 2026.
+
+-
+
+PBS resource `multijob=global`
+
+-
+
+submit as: `qsub -I -l walltime=01:00:00 -l select=1:multijob=global`
+
+-
+
+located in `/scratch.multijob-global/USERNAME/`
+
+-
+
+available on every node
+
+-
+
+slow
+
+-
+
+persistent scratch for independent consecutive jobs working on same data
+
+-
+
+semi-manual setup; user first creates the scratchdir in a selected location, copies the data etc.
+
+-
+
+PBS **does not** create the scratch directory; the `multijob=global` currently serves only a journaling purpose
+
+-
+
+suitable for jobs working on large masses of data (databases) which take long to copy to/from storage
+
+### [Shared scratch on cluster Bee](#shared-scratch-on-cluster-bee)
+
+Will be renamed soon
+
+This scratch will be located in `/scratch.multijob-brno/USERNAME/` by September/October 2026.
+
+BeeGFS (Beyond Extensible Enterprise File System) is a parallel distributed filesystem designed specifically for the needs of high-performance computing (HPC). It is used in computing clusters, scientific simulations, machine learning, genomics, and everywhere large datasets and fast parallel access are essential.
+
+At MetaCentrum, we’ve adopted BeeGFS to meet the increasing challenges of data-intensive computations on data used by multiple job and/or job arrays. BeeGFS is available as a temporary working directory via the `scratch_shared` resource on cluster [bee.cerit-sc.cz](https://my.metacentrum.cz/clusters/bee.cerit-sc.cz).
+
+Main usecases:
+
+- PBS resource `scratch_shared` **together with** `cl_bee=True`,for example `qsub -l walltime=1:0:0 -q default@pbs-m1.metacentrum.cz -l select=1:ncpus=1:mem=400mb:scratch_shared=400mb:cl_bee=True`,
+
+- jobs with large files or a huge number of small files; BeeGFS efficiently handles massive datasets,
+
+- jobs with parallel I/O operation
+
+- jobs spanning multiple compute nodes
+
+- array jobs with intermediate results - BeeGFS is well-suited for workflows where subsequent computations can pick up intermediate results left in the scratch directory eliminating the need to copy data to permanent storage or run on the same machine as the previous step.
+
+Read more on [BeeGFS article on eInfra blog](https://blog-dev.cerit.io/blog/beegfs).
+
+## [Cleaning scratch](#cleaning-scratch)
+
+Directory `SCRATCHDIR` is not writable, only it’s content is. Therefore, you cannot, e.g. do `rm -rf $SCRATCHDIR`, but you can `rm -rf $SCRATCHDIR/*`.
+
+Users should always clear the content of the scratch directory after the job ends to free disc space. Otherwise, this directory will be automatically deleted after 14 days at most (earlier if there is lack of space on disks).
+
+## [Examples](#examples)
+
+Submit batch job with 100 GB scratch on local disc:
+
+```
+qsub -l select=1:ncpus=1:mem=4gb:scratch_local=100gb
+
+```
+
+Submit the interactive job with 20 GB memory and scratch in RAM:
+
+```
+qsub -I -l select=1:ncpus=1:mem=20gb:scratch_shm=true
+
+```
+
+Submit batch job with 1 GB of scratch on SSD disc:
+
+```
+qsub -l select=1:ncpus=1:mem=4gb:scratch_ssd=1gb
+
+```
+
+**System variables**
+
+```
+SCRATCHDIR
+    location of the scratch directory
+    echo $SCRATCHDIR
+SCRATCH_TYPE
+    type of scratch directory
+    echo $SCRATCH_TYPE
+SCRATCH_VOLUME
+    size of the scratch directory
+    echo $SCRATCH_VOLUME
+
+```
+
+![publicity banner](/_next/static/media/einfra_meta-zapati.0m5s8338yq376.svg)
+
+### On this page
+[Scratch types](#scratch-types)[Local scratch](#local-scratch)[Fast SSD scratch](#fast-ssd-scratch)[Scratch in RAM](#scratch-in-ram)[Shared scratch](#shared-scratch)[Multijob scratch fast](#multijob-scratch-fast)[Multijob scratch global](#multijob-scratch-global)[Shared scratch on cluster Bee](#shared-scratch-on-cluster-bee)[Cleaning scratch](#cleaning-scratch)[Examples](#examples)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

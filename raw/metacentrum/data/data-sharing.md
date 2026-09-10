@@ -1,0 +1,359 @@
+#
+
+Sometimes two or more MetaCentrum users need to work on the same files and directories.
+
+Since setting whole `home` directory as accessible to anyone is considered a security vulnerability (due to the possibility to manipulate sensitive files like .k5login, .bashrc by a third party) such settings are discouraged and are automatically reset.
+
+To make sharing of data possible and at the time safe, we offer two options varying slightly with respect to the expected volume of shared data.
+
+## [Group](#group)
+
+Choose this option if you need to share a moderate amount of data (one that would fit into an individual user’s quota). The shared data are accounted to users quotas based on the ownership of individual files.
+
+### [Initial setup](#initial-setup)
+
+- Choose a name for your group and ask us at [meta@cesnet.cz](mailto:meta@cesnet.cz) to create it
+
+- Include a list of members of the group and choose at least one group manager
+
+The group manager can later add/remove members of this group through the [Perun interface](../access/perun).
+
+After the group is created, you will be notified.
+
+Finally, create a directory dedicated for shared data, e.g. `mkdir /storage/CITY/home/USER/shared`.
+
+Note
+
+This directory for shared data needs to be created by the user, and also the name of it can be different.
+
+### [Usage](#usage)
+
+- assign the directory to your group (denoted by “MYGROUP”)
+
+```
+chgrp -R MYGROUP /storage/CITY/home/USER/shared
+
+```
+
+- set a “sticky bit” (permission atribute) to the directory, so that all the data created within it will belong to the group
+
+```
+chmod g+s /storage/CITY/home/USER/shared
+
+```
+
+- Ensure the correct identity within the system/job environment
+
+When creating files, the system has to know under which group identity the files should be created.
+
+Here, it is necessary to distinguish between the *work on frontends* and *work within running jobs*.
+
+### [Identity on frontends](#identity-on-frontends)
+
+To create files when working on frontends, it is necessary to change your primary group to the requested one:
+
+```
+newgrp MYGROUP # all the created files will be owned by the MYGROUP group
+umask 002 # will set the access rights of all the newly created files to rwxrwxr-x
+
+```
+
+You can include the above lines into system start-up scripts `/storage/*/home/USER/.profile` or equivalent file (e.g. `/storage/*/home/USER/.bash_profile`) so that the correct group is set automatically.
+
+Alternatively, you can ask us to change your primary group within the whole MetaCentrum infrastructure.
+
+### [Identity in running jobs](#identity-in-running-jobs)
+
+When creating files within running jobs, it is necessary to have the following lines within your batch script:
+
+```
+#!/bin/bash
+#PBS -W umask=002
+#PBS -W group_list=MYGROUP
+
+```
+
+- option `-W umask=002` ensures the correct access rights to created files (`rwxrwxr-x`)
+
+- option `-W group_list=MYGROUP` ensures that all the processes will run under the group `MYGROUP`
+
+these options further ensure an availability of the `$SCRATCHDIR` directory to the group members as well - the directory will be owned by the requested group and the access rights will be rwx:
+
+```
+$ qsub -I -W group_list=einfra -W umask=002
+qsub: waiting for job 4025666.pbs-m1.metacentrum.cz to start
+qsub: job 4025666.pbs-m1.metacentrum.cz ready
+
+konos6$ ls -ld $SCRATCHDIR
+drwxrwxr-x 2 makub einfra 6 Feb 13 10:50 /scratch/makub/job_4025666.pbs-m1.metacentrum.cz
+
+konos6$ id
+uid=13153(makub) gid=10002(einfra) groups=10000(meta),10002(einfra),10100(storage)
+
+```
+
+Warning
+
+Because of a bug in the Network File System (NFS) we use, it is necessary to explicitly change the group ownership of the newly created files/directories (at the end of an interactive session or job) by calling the command `chgrp -R MYGROUP DIRECTORY`. (Otherwise, the data will be saved under your primary group.) Alternatively, you can ask us for changing your primary group throughout the whole MetaCentrum infrastructure.
+
+### ``[sync_with_group usage](#sync_with_group-usage)
+
+Some users find changing `umask` inconvenient. For these users we recommend another approach.
+
+- Copy the files you need to work with from the shared directory elsewhere.
+
+- Process the data, create new files etc.
+
+- When ready to share the data, send them back into the shared directory by a command
+
+```
+sync_with_group group_name source_dir target_dir
+
+```
+
+where
+
+```
+group_name = name of the group the project directory belongs to
+source_dir = the working directory
+target_dir = shared project directory
+
+```
+
+## [Project directory](#project-directory)
+
+Choose this option if you need to share large amount of data for prolonged time. In project directories, the data are not accounted to users’ quotas, therefore project directory is best suited for sharing a large volume of data and/or large amount of files which could otherwise fill individual users’ quotas easily.
+
+Project directories undergo changes currently
+
+Due to insufficient space and hardware problems on “classical” NFS MetaCentrum storages, the project directories are being moved currently to different storages with slightly different filesystem (CephFS). Basically, `/storage/projects-du-praha` = CephFS, and `/storage/projects`, resp. `/storage/projects2` = old MetaCentrum NFS. The changes are consulted with each group individually. Stay tuned!
+
+### [Initial setup](#initial-setup-1)
+
+If you need to setup a new project directory,
+
+- Choose a name for your group and ask us at [meta@cesnet.cz](mailto:meta@cesnet.cz) to create it together with a project directory
+
+- Include list of members of the group and choose at least one group manager
+
+The group manager can later add/remove members of this group through the [Perun interface](../access/perun).
+
+You will be notified after the group and `/storage/projects-du-praha/GROUP_NAME`is created.
+
+### [Usage](#usage-1)
+
+Due to different style of data storage on CephFS, the project directories are not fully compatible with Unix file permissions.
+
+Therefore, we recommend to use `sync_with_group` utility (based on `rsync` command) as a replacement for a `cp` and `mv` commands for newly created files in the project directory.
+
+```
+sync_with_group <GROUP_NAME> <FILES_TO_COPY> /storage/projects-du-praha/<PROJECT_DIR_NAME>/
+
+```
+
+## [Sharing with ACL usage](#sharing-with-acl-usage)
+
+If you search for self-managed control over data sharing **without the need to create a user group**, try ACL.
+
+ACL (**A**ccess **C**ontrol **L**ist) extends classical Linux POSIX permissions by allowing fine-grained access control. It is a security mechanism—a table or set of rules—attached to resources like files, folders, or network interfaces that defines which users, systems, or traffic types are permitted or denied access.
+
+Basic commands: `setfacl`, `getfacl`.
+
+MetaCentrum ACL utility: `share-dir-nfsfacl`.
+
+Warning
+
+Currently the utility is in beta-testing and available only on `nympha.metacentrum.cz` frontend. If you want to give it a try, login to there.
+
+### [How it works](#how-it-works)
+
+Direct usage of `setfacl` and `getfacl` is possible in MetaCentrum.
+
+In this tutorial however we describe a `share-dir-nfsfacl` wrapper built over these commands.
+
+```
+share-dir-nfsfacl [-v] [-n] [-r] ACTION ...
+
+ACTION forms:
+  read      PATH LOGIN|GROUP|@GROUP
+  readwrite PATH LOGIN|GROUP|@GROUP
+  undo      [-p|--parent] PATH LOGIN|GROUP|@GROUP
+  show      [--raw] PATH
+  list
+
+```
+
+Common flags `-v` (verbose), `-n` (dry-run), `-r` (recursive) are accepted both before and after `ACTION`.
+
+- `read`: grant read access (`r-X`) to a user or group.
+
+- `readwrite`: grant read/write access (`rwX`) to a user or group.
+
+- `undo`: remove ACL entries for a user or group.
+
+- `show`: show current ACLs in human-readable format. Use `--raw` to get standard `getfacl` output.
+
+- `list`: print the local audit log from `~/.shared_dirs`.
+
+### [Examples](#examples)
+
+Share a directory for reading:
+
+```
+share-dir-nfsfacl read /home/alice/share bob
+
+```
+
+Share a directory for read/write access:
+
+```
+share-dir-nfsfacl readwrite /home/alice/share bob
+
+```
+
+Share with a group:
+
+```
+share-dir-nfsfacl read /home/alice/share @research
+
+```
+
+Show current ACLs (formatted):
+
+```
+share-dir-nfsfacl show /home/alice/share
+
+```
+
+Show raw `getfacl` output:
+
+```
+share-dir-nfsfacl show --raw /home/alice/share
+
+```
+
+List logged changes:
+
+```
+share-dir-nfsfacl list
+
+```
+
+### [Undo behavior](#undo-behavior)
+
+**Basic undo**
+
+```
+share-dir-nfsfacl undo /home/alice/share bob
+share-dir-nfsfacl undo -r /home/alice/share bob
+
+```
+
+This removes:
+
+- access ACL entries (`u:<name>` / `g:<name>`)
+
+- default ACL entries on directories (`d:u:<name>` / `d:g:<name>`)
+
+**Undo including parent directories (dangerous)**
+
+```
+share-dir-nfsfacl undo -p /home/alice/share bob
+
+```
+
+Warning: `-p / --parent` removes the full ACL entry for that subject on parent directories up to the matched allowed root, here `/home/alice`. This can break other sharing setups.
+
+Undo is best-effort: failures in undo commands are logged as warnings and processing continues.
+
+### [Dry-run mode](#dry-run-mode)
+
+Use `-n / --dry-run` with `read`, `readwrite`, or `undo` to preview remote `setfacl` commands without modifying ACLs.
+
+```
+share-dir-nfsfacl readwrite -n -r /home/alice/share bob
+
+```
+
+### [Verbose logging](#verbose-logging)
+
+Enable debug logging with `-v / --verbose`.
+
+This includes helper command and SSH command details.
+
+### [Allowed roots](#allowed-roots)
+
+The tool only operates under explicitly allowed roots configured by:
+
+```
+SHARE_DIR_ALLOWED_ROOTS="$HOME:/storage:/scratch"
+
+```
+
+Rules:
+
+- target path must be under one of these roots
+
+- operating directly on the root itself is forbidden
+
+If a path is outside allowed roots, the tool exits with code `3`.
+
+### [Audit log](#audit-log)
+
+Modifying actions (`read`, `readwrite`, `undo`) append JSON lines to `~/.shared_dirs`
+
+Typical fields include timestamp, action, local path, NFS server/export, remote path, subject, permissions (for grants), recursion flag, and dry-run flag.
+
+### [Exit codes](#exit-codes)
+
+- `0` - success
+
+- `2` - path not on NFS
+
+- `3` - security/configuration error
+
+- `130` - interrupted by user
+
+### [Notes and limitations](#notes-and-limitations)
+
+- start with `-n` when unsure
+
+- prefer group sharing (`@group`) for teams
+
+- avoid `--parent` unless needed
+
+- use `show` (or `show --raw`) instead of `ls` for ACL verification
+
+- ACL changes are applied on storage, not on frontend.
+
+- `ls` on FE may not reflect extended ACL state reliably.
+
+- use `show` to inspect ACL state; use `show --raw` for exact `getfacl` output
+
+- recursive behavior depends on storage filesystem `setfacl/getfacl` behavior
+
+- undo operations are best-effort
+
+You may see error like:
+
+```
+setfacl: <PATH>: Operation not permitted
+
+```
+
+Common cause:
+
+- write ACL allows another user to create files/directories
+
+- those objects are owned by that other user
+
+- later ACL modification on those objects is denied by the filesystem
+
+This is a filesystem-level permission issue, not ownership override by ACL.
+
+![publicity banner](/_next/static/media/einfra_meta-zapati.0m5s8338yq376.svg)
+
+### On this page
+[Group](#group)[Initial setup](#initial-setup)[Usage](#usage)[Identity on frontends](#identity-on-frontends)[Identity in running jobs](#identity-in-running-jobs)``[sync_with_group usage](#sync_with_group-usage)[Project directory](#project-directory)[Initial setup](#initial-setup-1)[Usage](#usage-1)[Sharing with ACL usage](#sharing-with-acl-usage)[How it works](#how-it-works)[Examples](#examples)[Undo behavior](#undo-behavior)[Dry-run mode](#dry-run-mode)[Verbose logging](#verbose-logging)[Allowed roots](#allowed-roots)[Audit log](#audit-log)[Exit codes](#exit-codes)[Notes and limitations](#notes-and-limitations)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

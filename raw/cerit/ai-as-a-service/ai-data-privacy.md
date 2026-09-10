@@ -1,0 +1,77 @@
+#
+
+CERIT-SC prioritizes the security and privacy of research data. Our AI platform is built as a secure, on-premise alternative to commercial AI services, ensuring that your interactions and data remain under the control of the national research infrastructure e-INFRA CZ.
+
+## [Data Residency & Infrastructure](#data-residency--infrastructure)
+
+All standard AI services operate entirely within the secure e-INFRA CZ infrastructure.
+
+- On-Premise Inference: Local models run locally on dedicated NVIDIA DGX-class or similar systems located in our data centres.
+
+- No External Leakage: By default, your queries and the AI’s responses are not transmitted to or logged by external providers (such as OpenAI, Google, or Anthropic).
+
+- Internet Access: The only exception is when a user explicitly enables “Internet Search” tools. In such cases, only the generated search queries are sent to external search engines to fetch relevant context.
+
+- Compliance with institutional and legal requirements.
+
+## [Handling Sensitive Data](#handling-sensitive-data)
+
+While our infrastructure is highly secure, users must choose the appropriate access method based on the sensitivity of their research data.
+
+The **WebUI environment** is intended for general research and assistance and does not meet the regulatory security standards required for processing sensitive, classified, or personally identifiable information (PII). By using this service, the user acknowledges that the platform is not certified for protected data and agrees that any upload of such information is done at the user’s own discretion and risk.
+If your workflow involves handling highly sensitive information, classified data, or Personally Identifiable Information (PII), please contact us first to discuss secure alternatives.
+
+Sensitive Data Workflows (API): For users working with sensitive or protected datasets, we recommend using **direct API access**. The underlying LLM inference engines run on dedicated infrastructure specifically designed to handle sensitive data. By using the API, you bypass the WebUI’s storage layer while still utilizing our secure, locally-hosted models.
+
+### [WebUI (Chat Interface)](#webui-chat-interface)
+
+The Open WebUI environment is intended for general research, coding assistance, and text processing.
+
+Open WebUI uses labels to distinguish how models are connected. Regardless of the label, your data remains within our controlled infrastructure unless explicitly stated otherwise.
+
+- Internal Models (OpenAI-compatible API): All models accessible to users run on our infrastructure, and inference-related data does not leave our systems.
+
+- Truly External Services: Access to third-party models (e.g., GPT-5) is only provided through special agreements. In these specific cases, data is transmitted to the third-party provider.
+
+- User Discretion: Users acknowledge that uploading protected data to the WebUI is done at their own discretion and risk.
+
+- Conversation History: If you use the WebUI, your chat history is stored in a local PostgreSQL database. When you delete a conversation in the WebUI, it is marked for removal from the database.
+
+- Users should be aware that files uploaded to the WebUI (e.g., documents for RAG, images for analysis) are stored permanently within the platform’s storage and cannot currently be deleted by the user.
+
+### [API (Direct Access)](#api-direct-access)
+
+For workflows involving sensitive or protected datasets, we recommend using the OpenAI-compatible API.
+
+- Bypassing Storage: Using the API allows you to interact directly with the inference engines, bypassing the storage layers used by the WebUI.
+
+- Dedicated Infrastructure: The underlying inference engines run on infrastructure specifically designed to handle sensitive research data securely.
+
+**Need a specialized environment?** If your research involves highly sensitive information or specific compliance requirements (e.g., health data under GDPR), please contact us at [k8s@cerit-sc.cz](mailto:k8s@cerit-sc.cz) to discuss a dedicated, isolated deployment.
+
+## [Logging & Data Retention](#logging--data-retention)
+
+We follow a **minimal data retention policy** to protect user privacy.
+
+**System Logs**
+
+- Open WebUI itself logs at the INFO level by default, meaning request/response data is not logged. Occasionally, when troubleshooting is required, the log level may be temporarily raised to DEBUG. In such cases, request/response data is stored until the Pod is restarted—typically when a new version is deployed.
+
+- Only system administrators have access to these logs, and they are not transmitted anywhere else.
+
+- Saved conversations are stored in a PostgreSQL database hosted within our infrastructure. When a conversation is deleted, it should also be removed from the database—though we have not independently verified whether WebUI fully implements this behavior.
+
+- The database is backed up to an S3 storage on CESNET with a 30-day retention period, meaning older backups are deleted after 30 days. Theoretically, a deleted conversation will be completely erased within that window. Again, access to this system is restricted to administrators only.
+
+## [Administrative Access & Confidentiality](#administrative-access--confidentiality)
+
+Access to system logs and the underlying database is strictly limited to authorized system administrators. All administrators are bound by Non-Disclosure Agreements (NDAs) to ensure the confidentiality of your interactions.
+
+No Data Mining: CERIT-SC does not “train” or fine-tune global models on user chat data. Your prompts are used solely to generate the immediate response for your session.
+
+![publicity banner](/_next/static/media/einfra_cerit-zapati.04hjcx2t12mah.svg)
+
+### On this page
+[Data Residency & Infrastructure](#data-residency--infrastructure)[Handling Sensitive Data](#handling-sensitive-data)[WebUI (Chat Interface)](#webui-chat-interface)[API (Direct Access)](#api-direct-access)[Logging & Data Retention](#logging--data-retention)[Administrative Access & Confidentiality](#administrative-access--confidentiality)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

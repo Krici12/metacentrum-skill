@@ -1,0 +1,31 @@
+#
+
+### [The Purpose of the Service](#the-purpose-of-the-service)
+
+S3 service is a versatile solution suitable for a wide range of use cases handling scientific data. It includes (but is not limited to) basic data storage, sharing big data among user groups, processing the data, automated backups, and various data handling applications.
+
+Access to the service is managed through virtual organizations and corresponding groups. S3 is ideal for sharing data between individual users and groups, which may include members from different institutions. Tools for managing users and groups are provided by the e-infrastructure.
+
+Users with access to S3 can be individuals or “service accounts” (e.g., backup machines, as many modern backup tools natively support S3 connections). Data in S3 is organized into **buckets**, which are typically linked to the logical structure of your data workflow, such as different stages of data processing.
+
+For sensitive data, encrypted buckets can be used on the client side, ensuring that even the storage manager does not have access to the data. Client-side encryption also secures data transmission over the network, protecting it from being decrypted in case of eavesdropping.
+
+On the other hand, the service is *not* suitable for long term storage and
+publication of data. For that, we operate the [National Repository Platform](https://docs.nrp.eosc.cz/en/docs/overview).
+
+### [Basic Terms Definition](#basic-terms-definition)
+
+- **S3 Bucket**: A storage container for objects within the Simple Storage Service (S3). Buckets are similar to file folders in object storage.
+
+- **Object**: The data stored in a bucket, consisting of:
+
+- **Content**: The data itself.
+
+- **Metadata**: Information such as size, name, last modified date, and URL.
+
+- **Unique Identifier**: A unique ID that distinguishes the object.
+
+### On this page
+[The Purpose of the Service](#the-purpose-of-the-service)[Basic Terms Definition](#basic-terms-definition)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

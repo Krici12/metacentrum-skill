@@ -1,0 +1,9 @@
+# Thrown-away temp files
+*.tmp.html
+*.pyc
+__pycache__/
+
+# macOS
+.DS_Store
+
+# Do NOT ignore raw/ — that is the tracked source of truth.

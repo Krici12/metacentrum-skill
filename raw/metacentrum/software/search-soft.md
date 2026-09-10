@@ -1,0 +1,119 @@
+#
+
+There are thousands of packages installed at MetaCentrum. The list of selected software is by far not complete.
+
+In general, when searching for an application, you should checklist the following:
+
+- Look at the list of selected software either [sorted alphabetically](../software/alphabet) or by field of interest.
+
+- Use `module avail` command as described [on this page](#modules).
+
+- Go through software prepared as [containers](#containers).
+
+💡
+Tip
+
+No luck? The consult [how to install new (version of) software](../software/install-software) either locally or system-wide.
+
+## [Modules](#modules)
+
+To search for any package, use command `module avail PACKAGE_NAME`.
+
+Search is case-insensitive
+
+For example, `module avail r/` and `module avail R/` are the same for the purpose of searching. Other commands, however (such as `module add` or `module load`) are case-sensitive.
+
+You can use stars (with backslash or quotes)
+
+The `module avail` command accepts bash special characters. The most useful is the `*` which replaces any string; for example `module avail g\*`, `module avail 'g*'`, `module avail "g*"` lists all modules beginning with “g”.
+
+Why backslash or quotes?
+
+To make it to `module avail`, the `*` must be protected by backslash or quotes not to be expanded by shell. To experiment with this behaviour, try `touch g001; module avail g*` (returns nothing) versus `touch g001; module avail g\*` (returns list of modules).
+
+### [Example 1: Orca versions](#example-1-orca-versions)
+
+```
+(BULLSEYE)user123@skirit:~$ module avail or
+----------- /packages/run/modules-5/debian11avx512 ---------------
+orca/  orthofinder/
+
+Key:
+modulepath  directory/
+
+```
+
+The above search will return all modules starting with the string “or”.
+
+```
+(BULLSEYE)user123@skirit:~$ module avail orca
+----------- /packages/run/modules-5/debian11avx512 ---------------
+orca/
+
+Key:
+modulepath  directory/
+
+```
+
+The above search is limited only to “orca” package, but does not show versions.
+
+```
+(BULLSEYE)user123@skirit:~$ module avail orca/
+----------- /packages/run/modules-5/debian11avx512 ---------------
+orca/2.6.4  orca/3.0.1  orca/4.0.2  orca/4.1.1  orca/4.1.2  orca/4.2.0  orca/4.2.1  orca/5.0.1-intel-19.0.4-bnofsgq  orca/5.0.3-intel-19.0.4-dyfxe2x
+
+Key:
+modulepath
+
+```
+
+With ”/” at the end, the search will output all versions available for the specified module.
+
+### [Example 2: R package](#example-2-r-package)
+
+Modulefiles of system-wide installed R package are of the form `r-PACKAGE`.
+
+To list all R packages, run
+
+```
+module avail r-*
+
+```
+
+Let’s say you want to use package `bsgenome`. Commands
+
+```
+module avail bsgenome
+module avail bsgenome*
+
+```
+
+will yield nothing.
+
+On the other hand,
+
+```
+module avail *bsgenome*
+
+```
+
+will show up the package.
+
+## [Containers](#containers)
+
+A part of software is prepared as Singularity containers.
+
+You can list them from any frontend at `/cvmfs/singularity.metacentrum.cz/` directory - for respective subdirectories, see [description on this page](../software/containers#pre-built-singularity-images).
+
+For instructions on container usage, see [the containers chapter](../software/containers).
+
+## [Services](#services)
+
+There are a number of [services closely connected to MetaCentrum](../related/galaxy) which may offer the software you need, too.
+
+![publicity banner](/_next/static/media/einfra_meta-zapati.0m5s8338yq376.svg)
+
+### On this page
+[Modules](#modules)[Example 1: Orca versions](#example-1-orca-versions)[Example 2: R package](#example-2-r-package)[Containers](#containers)[Services](#services)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

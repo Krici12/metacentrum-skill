@@ -1,0 +1,62 @@
+#
+
+The following section describes various elementary use cases related to the S3 service.
+
+### [Data Sharing Across Your Laboratory or Multiple Institutions](#data-sharing-across-your-laboratory-or-multiple-institutions)
+
+For research groups that need to share data, such as data collection and post-processing, S3 can be a powerful solution. The S3 service enables users to share data within a group or between institutions. This use case assumes each user has their own access to the repository. It is also ideal for sharing sensitive data across organizations, especially if you do not have a secure VPN. You can use encrypted S3 buckets (client-side encryption), which ensures that data is encrypted both at rest and during transmission, protecting it from eavesdropping.
+
+![s3client](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fs3_distribution.065zyh_3m1fht.png&w=3840&q=75)
+
+### [Data Management for Systems like Learning Management Systems, Catalogs, and Repositories](#data-management-for-systems-like-learning-management-systems-catalogs-and-repositories)
+
+If you manage large datasets and operate applications within an e-infrastructure that serves data to your users, S3 can support this use case effectively. This is particularly useful for applications that distribute large datasets (e.g., raw scans, videos, scientific datasets for computational environments) to end users. With S3, there is no need to upload data to the application server itself. Instead, users can directly upload and download data to/from object storage using S3 presigned URLs.
+
+![s3client](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fdirect_upload.3p280vyk8adpm.png&w=3840&q=75)
+
+#### [Automated Backup of Large Datasets Using Tools Natively Supporting S3](#automated-backup-of-large-datasets-using-tools-natively-supporting-s3)
+
+If you use specialized automated backup tools like Veeam, Bacula, or Restic, many of these tools offer native integration with the S3 service for backups. This means you don’t need to worry about connecting block devices to your infrastructure. Simply request an S3 storage setup and reconfigure your backup process. You can also combine this with the WORM (Write Once, Read Many) model to protect against unwanted overwriting or ransomware attacks.
+
+![s3client](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fs3_backup.3hyulxrjm8n2p.png&w=3840&q=75)
+
+### [Personal space for your data](#personal-space-for-your-data)
+
+This case is similar to the VO storage service. This is a personal space in the S3 service just for your data, which does not allow sharing with a specific user. [Public reading](./s3-features) can be set for buckets, or [presign URL requests](./s3-features) can be used.
+
+### [Personal Storage Space for Your Data](#personal-storage-space-for-your-data)
+
+This use case is similar to the VO (Virtual Organization) storage service. It provides a personal space within S3 for your data, which is not shared with any specific user. You can configure public read access for the bucket or use presigned URLs to allow temporary access.
+
+### [Dedicated S3 Endpoint for Special Applications](#dedicated-s3-endpoint-for-special-applications)
+
+This service is designed for selected customers or users. A dedicated S3 endpoint can be created for critical systems to protect against DDoS (Distributed Denial of Service) attacks. The endpoint will be hidden from external users, and only authorized insiders will have access to it.
+
+### [Any Other Application](#any-other-application)
+
+If you need a combination of the services listed above or have an innovative idea for utilizing object storage services, don’t hesitate to reach out to us for further assistance.
+
+## [S3 Data Reliability (Data Redundancy) - replicated vs erasure coding](#s3-data-reliability-data-redundancy---replicated-vs-erasure-coding)
+
+The section below describes additional approaches for data redundancy applied to the object storage pool. The S3 service can be configured with **replicated** or **erasure code (EC)** redundancy.
+
+### [Replicated](#replicated)
+
+With replication, your data is stored in three copies within the data center. If one copy is corrupted, the original data remains intact and readable, while the damaged copy is restored in the background. Using replication also allows for faster read speeds since data can be retrieved from all replicas simultaneously. However, the write speed may be slower because the write operation waits for confirmation from all three replicas.
+
+**Suitable for?**
+
+This method is ideal for smaller volumes of live data where read speed is a priority (though not as well-suited for large data volumes).
+
+### [Erasure Coding (EC)](#erasure-coding-ec)
+
+Erasure coding (EC) is a data protection technique similar to dynamic RAID found in disk arrays. In EC, data is split into individual fragments and distributed across storage with built-in redundancy. If a disk or an entire storage server fails, the data remains accessible and is automatically restored in the background. This method ensures that your data isn’t stored on a single disk that could fail and result in data loss.
+
+**Suitable for?**
+
+Erasure coding is well-suited for storing large data volumes and datasets.
+
+### On this page
+[Data Sharing Across Your Laboratory or Multiple Institutions](#data-sharing-across-your-laboratory-or-multiple-institutions)[Data Management for Systems like Learning Management Systems, Catalogs, and Repositories](#data-management-for-systems-like-learning-management-systems-catalogs-and-repositories)[Automated Backup of Large Datasets Using Tools Natively Supporting S3](#automated-backup-of-large-datasets-using-tools-natively-supporting-s3)[Personal space for your data](#personal-space-for-your-data)[Personal Storage Space for Your Data](#personal-storage-space-for-your-data)[Dedicated S3 Endpoint for Special Applications](#dedicated-s3-endpoint-for-special-applications)[Any Other Application](#any-other-application)[S3 Data Reliability (Data Redundancy) - replicated vs erasure coding](#s3-data-reliability-data-redundancy---replicated-vs-erasure-coding)[Replicated](#replicated)[Erasure Coding (EC)](#erasure-coding-ec)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

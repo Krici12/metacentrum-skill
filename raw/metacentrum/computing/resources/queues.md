@@ -1,0 +1,72 @@
+#
+
+## [Default queue](#default-queue)
+
+Queues are a basic concept of PBS. When submitting a job, the user normally does not have to specify any queue. There exists a default queue, namely `default@pbs-m1.metacentrum.cz` where the job goes if not specified otherwise. Then it is automatically sorted to respective queues based on duration of the job (walltime) and/or numbers of GPUs.
+
+## [Specific queues](#specific-queues)
+
+In some cases, it is possible or even recommended that the user chooses a particular queue. This is the case when you have access to specific resources or the job cannot be routed only according to walltime and the number of GPUs.
+For any particular job submission you can specify the queue in the qsub command by adding `-q <queue_name>`.
+
+| Queue name |Description |
+| [elixircz@pbs-m1.metacentrum.cz](https://my.metacentrum.cz/queues/elixircz@pbs-m1.metacentrum.cz) |Queue using hardware dedicated to [ELIXIR](../../access/elixir) group members |
+| [gpu_dgx@pbs-m1.metacentrum.cz](https://my.metacentrum.cz/queues/gpu_dgx@pbs-m1.metacentrum.cz) |[Jobs requiring >= 4 GPUS with NVlink](../gpu-comput/dgx) |
+| [uv18@pbs-m1.metacentrum.cz](https://my.metacentrum.cz/queues/uv18@pbs-m1.metacentrum.cz) |Jobs requiring >100 CPUs OR >500 GB of memory |
+
+## [Queue info by qstat](#queue-info-by-qstat)
+
+The `qstat` command provides info about queues and jobs.
+
+Example:
+
+```
+qstat -q  # get list of queues and their properties
+qstat -Q  # dtto, different format
+
+```
+
+To see details for a selected queue, use:
+
+```
+qstat -Q -f queue_name@server_name
+
+```
+
+Example of output of `qstat -Q -f gpu_long@pbs-m1.metacentrum.cz`:
+
+```
+(BUSTER)user123@skirit:~$ qstat -Q -f gpu_long@pbs-m1.metacentrum.cz
+Queue: gpu_long
+    queue_type = Execution
+    Priority = 66
+    total_jobs = 24
+    state_count = Transit:0 Queued:14 Held:0 Waiting:0 Running:10 Exiting:0 Begun:0
+    max_queued = [u:PBS_GENERIC=2000]
+    resources_max.ngpus = 99
+    resources_max.walltime = 336:00:00
+    resources_min.mem = 50mb
+    resources_min.ncpus = 1
+    resources_min.ngpus = 1
+    resources_default.ngpus = 0
+    comment = Queue for long time computations on GPU|Fronta pro dlouhodobe vydpocty na GPU
+    default_chunk.queue_list = q_gpu_long
+    resources_assigned.mem = 1760gb
+    resources_assigned.mpiprocs = 124
+    resources_assigned.ncpus = 124
+    resources_assigned.nodect = 10
+    max_run_res.ncpus = [u:PBS_GENERIC=200]
+    backfill_depth = 2
+    enabled = True
+    started = True
+
+```
+
+In this particular queue, no jobs can run unless they require at least 1 GPU (`resources_min.ngpus`).
+
+![publicity banner](/_next/static/media/einfra_meta-zapati.0m5s8338yq376.svg)
+
+### On this page
+[Default queue](#default-queue)[Specific queues](#specific-queues)[Queue info by qstat](#queue-info-by-qstat)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

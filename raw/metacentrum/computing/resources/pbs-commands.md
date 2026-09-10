@@ -1,0 +1,96 @@
+#
+
+The most relevant native PBS commands (and related options) are:
+
+- `qsub` - submit the job
+
+- `qmove` - move the job to another queue
+
+- `qdel` - delete a waiting or running job
+
+- `qstat` - view current state of jobs
+
+- `pbsnodes` - get info about current node(s) state and their properties
+
+## [PBS commands check for Kerberos ticket](#pbs-commands-check-for-kerberos-ticket)
+
+**Since Feb 2026, all PBS commands prompt for a password in case the [Kerberos ticket](../../access/log-in#kerberos) is missing**
+
+Normally the Kerberos ticket is issued upon login and lasts for 12 hours.
+
+If the PBS command does not find a valid Kerberos ticket, it prompts the user for a password to renew it:
+
+```
+(BOOKWORM)user_123@skirit:~$ pbsnodes -v zenon12
+Kerberos Authentication:
+Attempt (1/3): user_123@META's Password:
+zenon12
+     Mom = zenon12.cerit-sc.cz
+     ntype = PBS
+     state = job-busy
+     ...
+
+```
+
+## [qsub](#qsub)
+
+Basic command to submit a job.
+
+```
+qsub -I -l select=1:ncpus=4:mem=4gb -l walltime=1:00:00 # interactive job
+qsub  -l select=1:ncpus=4:mem=4gb:scratch_local=10gb -l walltime=1:00:00 myJob.sh # batch job
+
+```
+
+What if Kerberos ticket expires while the interactive job waits to run?
+
+In case the Kerberos ticket expires **after** the qsub command is issued, but **before** the interactive job starts to run, the user is again prompted for password when the job starts:
+
+```
+(BOOKWORM)user_123@skirit:~$ qsub -I -l select=vnode=zenon12
+qsub: waiting for job 117665.pbs-m1.metacentrum.cz to start
+Kerberos Authentication:
+Attempt (1/3): user_123@META's Password:
+qsub: job 117665.pbs-m1.metacentrum.cz ready
+
+(BOOKWORM)user_123@zenon12:~$
+
+```
+
+## [qdel](#qdel)
+
+The `qdel` command deletes a queing or running job.
+
+Examples:
+
+```
+qdel job_ID # basic usage
+qdel -W force job_ID # use if normal qdel does not work ("stuck" jobs)
+
+```
+
+## [qmove](#qmove)
+
+The `qmove` command moves a job to another queue.
+
+Jobs can only be moved from one server to another if they are in the `Q` (queued), `H` (held), or `W` (waiting) states, and only if there are no running subjobs. A job in the Running (`R`), Transiting (`T`), or Exiting (`E`) state cannot be moved.
+
+Example:
+
+```
+qmove uv@pbs-m1.metacentrum.cz 475337.pbs-m1.metacentrum.cz # move job 475337.pbs-m1.metacentrum.cz to a queue uv@pbs-m1.metacentrum.cz
+
+```
+
+## [qstat](#qstat)
+
+`qstat` command probes the state of jobs and queues mainly. See sections [Queues in Meta](../../computing/resources/queues)
+
+For detailed options list, see `man qstat`.
+
+![publicity banner](/_next/static/media/einfra_meta-zapati.0m5s8338yq376.svg)
+
+### On this page
+[PBS commands check for Kerberos ticket](#pbs-commands-check-for-kerberos-ticket)[qsub](#qsub)[qdel](#qdel)[qmove](#qmove)[qstat](#qstat)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

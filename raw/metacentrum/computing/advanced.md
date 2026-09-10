@@ -1,0 +1,399 @@
+#
+
+This guide covers advanced topics for running jobs on MetaCentrum. If you’re new to MetaCentrum, start with the [Getting started](./run-basic-job) guide.
+
+## [Kerberos authentication](#kerberos-authentication)
+
+MetaCentrum uses Kerberos for internal authentication. Tickets expire after 10 hours.
+
+```
+klist      # List tickets
+kdestroy   # Delete tickets
+kinit      # Create new ticket
+
+```
+
+On ticket expiration, use `kinit` to regenerate. For OnDemand users, restart the web server via **Help → Restart Web Server**.
+
+For detailed Kerberos information, see [Kerberos security page](../access/security/kerberos).
+
+## [Detailed resource configuration](#detailed-resource-configuration)
+
+### [Resource specification methods](#resource-specification-methods)
+
+Resources can be specified in two ways:
+
+- On the command line with `qsub`
+
+- Inside the batch script on lines beginning with `#PBS`
+
+```
+# On command line
+qsub -l select=1:ncpus=4:mem=4gb:scratch_local=10gb -l walltime=1:00:00 myJob.sh
+
+```
+
+If both resource specifications are present (CLI and script), the values on CLI have priority.
+
+### [Chunk-wide vs job-wide resources](#chunk-wide-vs-job-wide-resources)
+
+According to PBS terminology, a **chunk** is a subset of computational nodes on which the job runs. Resources can be:
+
+- **Chunk-wide**: Applied to each chunk separately (e.g., `ncpus`, `mem`, `scratch_local`)
+
+- **Job-wide**: Applied to the job as a whole (e.g., `walltime`, software licenses)
+
+For most “normal” jobs, the number of chunks is 1 (default value). See [PBS resources guide](./resources/resources) for complex parallel computing scenarios.
+
+### [Scratch directories](#scratch-directories)
+
+Different scratch types are available. A basic recommended user choice is `scratch_local`.
+
+**Recommended:**
+
+```
+qsub -I -l select=1:ncpus=2:mem=4gb:scratch_local=1gb -l walltime=2:00:00
+
+```
+
+Access scratch via `$SCRATCHDIR`. Use `go_to_scratch <job_number>` to access scratch after job failure.
+
+For detailed scratch type information, see [Scratch storage guide](./infrastructure/scratch-storages).
+
+## [Interactive jobs](#interactive-jobs)
+
+### [Starting interactive jobs](#starting-interactive-jobs)
+
+Request interactive session: `qsub -I -l select=1:ncpus=4 -l walltime=2:00:00`
+
+Jobs are auto-terminated when walltime expires.
+
+### [When useful](#when-useful)
+
+- Testing software, input formats, resource estimates
+
+- Compiling, processing/moving large data
+
+- Running [GUI applications](../software/graphical-access)
+
+### [Example](#example)
+
+Interactive jobs are useful for software testing, compiling, and data processing:
+
+```
+qsub -I -l select=1:ncpus=4 -l walltime=2:00:00
+# Once on compute node:
+module add mambaforge
+mamba create -n my_env
+mamba activate my_env
+python my_script.py
+
+```
+
+## [Job ID details](#job-id-details)
+
+Job IDs identify jobs for tracking and management: `13010171.pbs-m1.metacentrum.cz` (full form required).
+
+Get your job ID:
+
+- After `qsub` command
+
+- Inside jobs: `echo $PBS_JOBID`
+
+- From qstat: `qstat -u username`
+
+## [Job monitoring and management](#job-monitoring-and-management)
+
+### [Job states](#job-states)
+
+PBS Pro uses different codes to mark job state within the PBS ecosystem:
+
+| State |Description |
+| Q |Queued |
+| H |Held. Job is suspended by the server, user, or administrator. Job stays in held state until released by user or administrator. |
+| R |Running |
+| S |Suspended (substate of R) |
+| E |Exiting after having run |
+| F |Finished |
+| X |Finished (subjobs only) |
+| W |Waiting. Job is waiting for its requested execution time or delayed due to stagein failure. |
+
+### [Advanced qstat commands](#advanced-qstat-commands)
+
+```
+qstat -u user123                     # list all jobs (running or queued)
+qstat -xu user123                    # list finished jobs
+qstat -f <jobID>                     # full details of running/queued job
+qstat -xf <jobID>                    # full details of finished job
+
+```
+
+For more detailed job monitoring and history, see [Job tracking](./jobs/job-tracking).
+
+### [qstat output interpretation](#qstat-output-interpretation)
+
+```
+Job ID               Username Queue    Jobname    SessID NDS TSK Memory Time  S Time
+-------------------- -------- -------- ---------- ------ --- --- ------ ----- - -----
+11733550.pbs-m1      user123  q_2h     myJob.sh   --    1   1    1gb  00:05 Q  --
+
+```
+
+Key headers: `S`=status, `NDS`=nodes, `TSK`=tasks, `Memory`=requested memory, `Time`=elapsed.
+
+### [Job deletion](#job-deletion)
+
+**Delete a submitted/running job:**
+
+```
+qdel 21732596.pbs-m1.metacentrum.cz
+
+```
+
+**Force deletion (if plain qdel doesn’t work):**
+
+```
+qdel -W force 21732596.pbs-m1.metacentrum.cz
+
+```
+
+## [PBS server and queues](#pbs-server-and-queues)
+
+**Essential commands**: `qsub` (submit), `qstat` (query), `qdel` (delete)
+
+**Queues**: Jobs route automatically from routing queue to execution queues (`q_1h`, `q_1d`, etc.). Don’t specify a queue unless necessary.
+
+View all queues at [PBSmon](https://my.metacentrum.cz/queues). For more on queues, see [Queues guide](./resources/queues).
+
+## [Output files and error handling](#output-files-and-error-handling)
+
+When a job completes, two files are created in the submission directory: `jobname.o<jobID>` (STDOUT) and `jobname.e<jobID>` (STDERR). The `.e` file is the first place to look if a job fails.
+
+For detailed output file handling, see [Job tracking guide](./jobs/job-tracking).
+
+## [Exit status interpretation](#exit-status-interpretation)
+
+Exit status indicates how a batch job finished (interactive jobs always return 0).
+
+```
+qstat -xf job_ID | grep Exit_status  # Get exit status
+
+```
+
+For jobs >24h old, use `pbs-get-job-history` CLI utility.
+
+**Ranges**:
+
+- `X < 0`: PBS killed job (resource exceeded)
+
+- `0 <= X < 256`: Shell/top process exit
+
+- `X >= 256`: OS signal (subtract 256 for signal code; use `kill -l` to list signals)
+
+**Common statuses**: `-23`=missing Kerberos, `-25`=exceeded CPUs, `-27`=exceeded memory, `-29`=exceeded walltime, `0`=normal, `271`=SIGTERM (qdel)
+
+## [Scratch cleanup](#scratch-cleanup)
+
+When a job ends with an error, data may remain in scratch. Clean up after retrieving useful data.
+
+### [Manual cleanup](#manual-cleanup)
+
+Log in to the compute node and remove scratch contents:
+
+```
+ssh user123@node.fzu.cz
+cd /scratch/user123/job_JOBID
+rm -r *
+
+```
+
+Use `go_to_scratch <job_number>` to access scratch after job failure. The scratch directory itself is deleted automatically.
+
+### [Automatic cleanup with trap](#automatic-cleanup-with-trap)
+
+```
+trap 'clean_scratch' EXIT TERM  # Clean on normal exit or termination
+trap 'echo "$PBS_JOBID failed at $SCRATCHDIR" >> log.txt' TERM  # Log for manual cleanup
+
+```
+
+The `trap` command ensures scratch cleanup even when jobs fail. See [Trap command guide](./jobs/trap-command) for details.
+
+## [Custom output paths](#custom-output-paths)
+
+By default, job output files go to the submission directory (`$PBS_O_WORKDIR`). You can change this:
+
+```
+qsub -o /custom-path/myOutputFile -e /custom-path/myErrorFile script.sh
+
+```
+
+Or in the batch script:
+
+```
+#PBS -o /custom-path/myOutputFile
+#PBS -e /custom-path/myErrorFile
+
+```
+
+For more on output file customization, see [PBS resources guide](./resources/resources).
+
+## [Job arrays](#job-arrays)
+
+Job arrays allow you to run many similar jobs with a single submission instead of submitting each one individually.
+
+### [Submitting a job array](#submitting-a-job-array)
+
+```
+qsub -J X-Y[:Z] script.sh
+
+```
+
+- `X` – first index of the job
+
+- `Y` – last index of the job
+
+- `Z` – optional index step
+
+**Example:** `qsub -J 2-7:2 script.sh` creates subjobs with indexes 2, 4, 6.
+
+### [Array job format](#array-job-format)
+
+The main job is displayed with `[]` (e.g., `969390[]`). Each subjob has an ID like `969390[1].pbs-m1.metacentrum.cz`.
+
+### [Array job variables](#array-job-variables)
+
+Inside your script, use:
+
+```
+$PBS_ARRAY_INDEX  # Index of the current subjob
+$PBS_ARRAY_ID     # Job ID of the main job
+
+```
+
+### [Monitoring array jobs](#monitoring-array-jobs)
+
+```
+qstat -t  # List all subjobs
+qstat -f 969390'[]' -x | grep array_state_count  # See overall status
+
+```
+
+For more on job arrays, see [Job arrays guide](./jobs/job-arrays).
+
+## [Job dependencies](#job-dependencies)
+
+Make a job wait until another job completes successfully.
+
+### [Submit with dependencies](#submit-with-dependencies)
+
+```
+qsub -W depend=afterok:job1_ID.pbs-m1.metacentrum.cz job2_script.sh
+
+```
+
+This submits `job2_script.sh` to run only after `job1_ID` completes with exit code 0.
+
+### [Modify existing job dependencies](#modify-existing-job-dependencies)
+
+```
+qalter -W depend=afterok:job1_ID.pbs-m1.metacentrum.cz job2_ID.pbs-m1.metacentrum.cz
+
+```
+
+## [Modifying job attributes](#modifying-job-attributes)
+
+Modify **queued** jobs (status Q) with `qalter`:
+
+```
+qalter -l select=1:ncpus=32:mem=10gb job_ID.pbs-m1.metacentrum.cz
+qalter -l walltime=02:00:00 job_ID.pbs-m1.metacentrum.cz
+
+```
+
+Limits
+
+Walltime can only be modified within the queue’s maximum. You must specify the entire `-l` attribute with `qalter`.
+
+For running jobs, see “Extend walltime” below. For more, see [Modify job attributes guide](./jobs/modify-job-attributes).
+
+## [Extend walltime for running jobs](#extend-walltime-for-running-jobs)
+
+Extend walltime of **running** jobs with `qextend`:
+
+```
+qextend job_ID.pbs-m1.metacentrum.cz 01:00:00  # hh:mm:ss or seconds
+
+```
+
+**Limits**: Max 20 times/month AND 1440 CPU-hours/month (CPU-hours = walltime × ncpus)
+
+```
+qextend info  # Check your quota
+
+```
+
+Array jobs require support contact: [meta@cesnet.cz](mailto:meta@cesnet.cz)
+
+For more, see [Extend walltime guide](./jobs/extend-walltime).
+
+## [Module span management](#module-span-management)
+
+For conflicting modules, use subshells to isolate environments:
+
+```
+(module add python/3.8.0-gcc; python script.py)  # Independent module environment
+
+```
+
+```
+module display module_name  # Show module details
+
+```
+
+`module display` shows key variables: `PATH`, `LD_LIBRARY_PATH`, `LIBRARY_PATH`.
+
+For more, see [Software modules guide](../software/modules).
+
+## [Research group annual report](#research-group-annual-report)
+
+Submit annual reports by end of January: group name/members/contact, research interests, contributions (hardware, software), projects, publications.
+
+Send to [annual-report@metacentrum.cz](mailto:annual-report@metacentrum.cz).
+
+## [Additional resources](#additional-resources)
+
+- [Parallel computing](./parallel-comput) – for running MPI/OpenMP jobs
+
+- [GPU computing](./gpu-comput) – for GPU-accelerated workloads
+
+- [PBS resources](./resources/resources) – detailed resource specification guide
+
+- [Job tracking](./jobs/job-tracking) – detailed job monitoring and history
+
+- [Email notifications](./jobs/email-notif) – configure job status emails
+
+- [Software modules](../software/modules) – advanced module management
+
+- [Frontend and storage details](./infrastructure/frontend-storage) – understanding the architecture
+
+- [Finished jobs](./jobs/finished-jobs) – retrieving information about completed jobs
+
+- [Containers](../software/containers) – using Apptainer/Singularity images
+
+## [Web-based job running with usegalaxy.cz](#web-based-job-running-with-usegalaxycz)
+
+As an alternative to command-line job submission, use **usegalaxy.cz** – a web-based platform providing thousands of tools, large data quotas (250 GB for e‑INFRA CZ login), and workflow support.
+
+**Access**: [https://usegalaxy.cz](https://usegalaxy.cz) – log in with e-INFRA CZ or Life Science credentials
+
+**When useful**: Web interface preference, available Galaxy tools, workflow building, avoiding script writing
+
+**More resources**: For detailed features and quotas, see [usegalaxy.cz guide](../graphical/usegalaxy).
+
+![publicity banner](/_next/static/media/einfra_meta-zapati.0m5s8338yq376.svg)
+
+### On this page
+[Kerberos authentication](#kerberos-authentication)[Detailed resource configuration](#detailed-resource-configuration)[Resource specification methods](#resource-specification-methods)[Chunk-wide vs job-wide resources](#chunk-wide-vs-job-wide-resources)[Scratch directories](#scratch-directories)[Interactive jobs](#interactive-jobs)[Starting interactive jobs](#starting-interactive-jobs)[When useful](#when-useful)[Example](#example)[Job ID details](#job-id-details)[Job monitoring and management](#job-monitoring-and-management)[Job states](#job-states)[Advanced qstat commands](#advanced-qstat-commands)[qstat output interpretation](#qstat-output-interpretation)[Job deletion](#job-deletion)[PBS server and queues](#pbs-server-and-queues)[Output files and error handling](#output-files-and-error-handling)[Exit status interpretation](#exit-status-interpretation)[Scratch cleanup](#scratch-cleanup)[Manual cleanup](#manual-cleanup)[Automatic cleanup with trap](#automatic-cleanup-with-trap)[Custom output paths](#custom-output-paths)[Job arrays](#job-arrays)[Submitting a job array](#submitting-a-job-array)[Array job format](#array-job-format)[Array job variables](#array-job-variables)[Monitoring array jobs](#monitoring-array-jobs)[Job dependencies](#job-dependencies)[Submit with dependencies](#submit-with-dependencies)[Modify existing job dependencies](#modify-existing-job-dependencies)[Modifying job attributes](#modifying-job-attributes)[Extend walltime for running jobs](#extend-walltime-for-running-jobs)[Module span management](#module-span-management)[Research group annual report](#research-group-annual-report)[Additional resources](#additional-resources)[Web-based job running with usegalaxy.cz](#web-based-job-running-with-usegalaxycz)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

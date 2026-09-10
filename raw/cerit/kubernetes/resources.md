@@ -1,0 +1,198 @@
+#
+
+## [Requests and Limits](#requests-and-limits)
+
+As described in the [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/), the platform uses two kinds of resource limits: *Requests*, which provide a guaranteed amount of a resource, and *Limits*, which specify that a resource must never exceed a limit. Users can specify *Requests* only, which enables guarantees without an upper limit (though this is forbidden on our platform), or *Limits* only, in which case *Requests* and *Limits* are equal. All resources are allocated from a single computing node, which means they cannot be larger than the capacity of a single node; for example, requesting 1000 CPUs will never be satisfied. Resources consumed between the *Requests* and *Limits* levels are not guaranteed. The Kubernetes scheduler considers only *Requests* when planning Pods to nodes, so disk or memory pressure can occur on the node due to overbooking these resources. In this case, a Pod can be evicted from the node. For CPU resources between *Requests* and *Limits*, slowdown can occur if the node does not have free CPUs available.
+
+A general YAML fragment looks like this:
+
+```
+resources:
+  requests:
+  # resources
+  limits:
+  # resources
+
+```
+
+## [CPU](#cpu)
+
+CPU resources can be requested in whole CPU units, such as `2` for two CPUs, or in milli units, such as `100m` for 0.1 CPU. See the complete example below.
+
+## [Memory](#memory)
+
+Memory resources can be requested in bytes or multiples of binary bytes. The notation `1000Mi` or `1Gi` represents 1 GB of memory. This resource amount includes shared memory (see below) and all `emptyDir` volumes that use memory. The example below consumes up to 1 GB of memory resource; if an application requires, for example, 2 GB of memory, the user needs to request 3 GB of memory resource.
+
+```
+volumes:
+- name ramdisk
+  emptyDir:
+    medium: Memory
+    sizeLimit: 1Gi
+
+```
+
+### [Shared Memory](#shared-memory)
+
+By default, each container runs with a 64 MB limit on [shared memory](https://man7.org/linux/man-pages/man7/shm_overview.7.html). For many cases, this limit is sufficient, but for some GPU or GUI applications, this amount is inadequate. In such cases, the SHM size needs to be increased. This cannot be done in the `resources` section; the only option is to mount an additional memory volume using the following YAML fragment, which increases the SHM size to 1 GB:
+
+```
+volumes:
+- name: dshm
+  emptyDir:
+    medium: Memory
+    sizeLimit: 1Gi
+
+volumeMounts:
+- name: dshm
+  mountPath: /dev/shm
+
+```
+
+The `name` of the volume is not important and can be any valid name; the `mountPath` must be `/dev/shm`.
+
+## [GPU](#gpu)
+
+GPU resources can be requested in two distinct ways. Users can request GPU(s) exclusively using `nvidia.com/gpu: x`, where `x` is a number denoting the number of requested GPUs. Users can also request only a fraction of a GPU using `nvidia.com/mig-1g.10gb: x` or `nvidia.com/mig-2g.20gb: x`, where `x` is the number of such GPU parts.
+
+`nvidia.com/mig-1g.10gb` requests a GPU part with 10 GB of memory; `nvidia.com/mig-2g.20gb` requests a GPU part with 20 GB of memory. More information about GPU fractions (MIG) can be found [here](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/index.html).
+
+### [Requesting Specific GPU Type](#requesting-specific-gpu-type)
+
+It is possible to request a specific GPU type when deploying a Pod. This can be done using [node selector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) labels. Each node equipped with a GPU has a label `nvidia.com/gpu.product`, which can currently have the following values: `NVIDIA-A10`, `NVIDIA-A100-80GB-PCIe`, `NVIDIA-A40`, `NVIDIA-H100-PCIe`, and `NVIDIA-L4`.
+
+For example, to directly request the NVIDIA A40 GPU type, use the following Pod definition:
+
+pod.yaml
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+spec:
+  nodeSelector:
+    nvidia.com/gpu.product: 'NVIDIA-A40'
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+       type: RuntimeDefault
+  containers:
+  - name: test
+    image: ubuntu
+    command:
+    - "sleep"
+    - "infinity"
+    resources:
+      limits:
+        cpu: 1
+        memory: 1Gi
+        nvidia.com/gpu: 1
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+
+```
+
+This is just an example Pod definition kept short for clarity. In a real use case, a `Deployment` or `Job` should be used; their inner `spec` is exactly the same as the `spec` above.
+
+Requesting a specific GPU type reduces the likelihood of the Pod being scheduled. All GPUs of a particular type may be in use; for example, we only have one NVIDIA L4 GPU.
+
+### [Requesting GPU Properties](#requesting-gpu-properties)
+
+It is also possible to request GPU properties, such as GPU memory. This is similar to requesting a specific GPU type, but a different node selector is used: `nvidia.com/gpu.memory`. However, in this case, a more complex `affinity` description must be used because the node selector can only match an exact value; it cannot compare values as less than or greater than.
+
+The following example allocates any GPU type with at least 80000 MB of GPU memory:
+
+pod.yaml
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+spec:
+  affinity:
+    nodeAffinity:
+       requiredDuringSchedulingIgnoredDuringExecution:
+         nodeSelectorTerms:
+         - matchExpressions:
+           - key: nvidia.com/gpu.memory
+             operator: Gt
+             values:
+             - '80000'
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+       type: RuntimeDefault
+  containers:
+  - name: test
+    image: ubuntu
+    command:
+    - "sleep"
+    - "infinity"
+    resources:
+      limits:
+        cpu: 1
+        memory: 1Gi
+        nvidia.com/gpu: 1
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+
+```
+
+For more about operators (`Gt`), see the [operators](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#operators) description.
+
+Although the amount of GPU memory is a number, it must be defined as a string, i.e., ‘80000’ and not 80000.
+
+## [Storage](#storage)
+
+Users should also specify the required `ephemeral-storage` resource. Units are the same as for the `memory` resource. This resource denotes a limit on local storage that comprises the size of the running container and all local files created. These files include all temporary files within a container, such as files in `/tmp` or `/var/tmp` directories, and also all `emptyDir` volumes that are not in memory.
+
+## [Full Resource Example](#full-resource-example)
+
+The following example requests 1 GPU, 2 CPUs, and 4 GB of memory guaranteed, and 3 CPUs and 6 GB of memory as a hard limit.
+
+```
+resources:
+  requests:
+    cpu: 2
+    memory: 4Gi
+    nvidia.com/gpu: 1
+  limits:
+    cpu: 3
+    memory: 6Gi
+    nvidia.com/gpu: 1
+
+```
+
+The following example requests 10 GB of GPU memory, 0.5 CPU, and 4 GB of memory guaranteed and also as a hard limit.
+
+```
+resources:
+  requests:
+    cpu: 500m
+    memory: 4Gi
+    nvidia.com/mig-1g.10gb: 1
+  limits:
+    cpu: 500m
+    memory: 4Gi
+    nvidia.com/mig-1g.10gb: 1
+
+```
+
+![publicity banner](/_next/static/media/einfra_cerit-zapati.04hjcx2t12mah.svg)
+
+### On this page
+[Requests and Limits](#requests-and-limits)[CPU](#cpu)[Memory](#memory)[Shared Memory](#shared-memory)[GPU](#gpu)[Requesting Specific GPU Type](#requesting-specific-gpu-type)[Requesting GPU Properties](#requesting-gpu-properties)[Storage](#storage)[Full Resource Example](#full-resource-example)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

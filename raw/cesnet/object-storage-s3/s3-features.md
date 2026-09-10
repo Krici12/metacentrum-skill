@@ -1,0 +1,687 @@
+#
+
+The following sections provide a basic overview of advanced S3 features that can enhance the efficiency of your data workflow.
+
+## [Sharing an S3 Object Using (Presigned) URL](#sharing-an-s3-object-using-presigned-url)
+
+⚠️
+To generate URL links for objects stored in S3 storage, you must first set up the **[aws tool](./aws-cli)**.
+
+By default, all objects and buckets are private. A pre-signed URL is a reference to a Ceph S3 object that allows anyone with the URL to retrieve the object via an HTTP GET request.
+
+The following presigning command generates a pre-signed URL for a specified bucket and key, which remains valid for one hour:
+
+```
+aws s3 --profile myprofile presign s3://bucket/file
+
+```
+
+To create a pre-signed URL with a custom expiration time that links to an object in an S3 bucket, use the following command:
+
+```
+aws s3 --profile myprofile presign s3://bucket/file --expires-in 2419200
+
+```
+
+This will create a URL that remains accessible for one month. The `--expires-in` parameter is specified in seconds.
+
+Once the pre-signed URL has expired, you will see a message like the following:
+
+```
+    This XML file does not appear to have any style information associated with it. The document tree is shown below.
+    <Error>
+    <link type="text/css" rel="stylesheet" id="dark-mode-general-link"/>
+    <link type="text/css" rel="stylesheet" id="dark-mode-custom-link"/>
+    <style lang="en" type="text/css" id="dark-mode-custom-style"/>
+    <Code>AccessDenied</Code>
+    <RequestId>tx0000000000000000f8f26-00sd242d-1a2234a7-storage-cl2</RequestId>
+    <HostId>1aasd67-storage-cl2-storage</HostId>
+    </Error>
+
+```
+
+**Changing the URL lifetime**
+
+Once a pre-signed URL is generated, its lifetime cannot be changed. You will need to generate a new pre-signed URL, whether the original URL has expired or not.
+
+## [S3 Object Versioning](#s3-object-versioning)
+
+Object Versioning is used to store multiple copies of an object within the same bucket, with each copy representing the object’s content at a specific point in time. This feature can help protect objects in a bucket from being overwritten or accidentally deleted.
+
+To enable this functionality, it must be activated at the bucket level, resulting in three possible bucket states: ‘unversioned’, ‘versioning enabled’ or ‘versioning suspended’.
+
+When a bucket is created, it starts in the ‘unversioned state’.
+
+Once versioning is enabled, the bucket can switch between ‘versioning enabled’ and ‘versioning suspended’ states, but it can not revert to the ‘unversioned state’. In other words, versioning cannot be disabled; it can only be suspended.
+
+Each version of an object is identified by a VersionID. If versioning is not enabled, the VersionID will be null. In a versioned bucket, updating an object with a PUT request will store a new version of the object with a unique VersionID.
+
+You can access a specific version of an object in a bucket using either its name or the combination of the name and VersionID. If you access the object by name only, the most recent version will be retrieved.
+
+If an object is deleted from a versioned bucket, any subsequent GET requests will return an error unless a VersionID is specified. To restore a deleted object, there is no need to download and re-upload it; you can simply issue a COPY operation using the specific VersionID. This process will be demonstrated in this guide.
+
+To test object versioning, we will use the AWS CLI, an open-source tool that provides commands for interacting with AWS services via the terminal. Specifically, we will use the s3api command set, which contains API-level commands for working with S3.
+
+### [Bucket Versioning](#bucket-versioning)
+
+In a non-versioned bucket, uploading an object with the same key will overwrite the existing object. In a versioned bucket, uploading an object with the same key will make the newly uploaded object the current version, while the previous object will become a non-current version.
+
+⚠️
+For proper functionality, it is essential to use the —endpoint-url option with all commands when specifying the relevant S3 service addresses operated by the CESNET association.
+
+**Bucket name restrictions**
+
+The bucket name must be unique within the tenant and can only contain lowercase letters, numbers, dashes, and periods. The name must start with a lowercase letter or number and cannot have periods next to dashes or multiple consecutive periods. Additionally, we recommend avoiding the use of ”/” and ”_” in the name, as this may prevent it from being used via the API.
+
+First, we need to create the bucket where we will set up versioning.
+
+```
+aws s3api create-bucket --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+```
+
+Next, we can check if versioning is enabled.
+
+```
+aws s3api get-bucket-versioning --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+```
+
+Now we enable versioning.
+
+```
+aws s3api put-bucket-versioning --bucket "bucket name" --versioning-configuration Status=Enabled --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+```
+
+If we check the versioning status again, we will see that it is enabled.
+
+```
+aws s3api get-bucket-versioning --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+    {
+    "Status": "Enabled",
+    "MFADelete": "Disabled"
+    }
+
+```
+
+### [Adding an Object](#adding-an-object)
+
+Now, we will put a new object to the created bucket.
+
+```
+aws s3api put-object --key "file name" --body "file path 1" --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+    {
+    "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+    "VersionId": "KdS5Yl0d06bBSYriIddtVb0h5gofiNX"
+    }
+
+```
+
+We can change the file by updating the body.
+
+```
+aws s3api put-object --key "file name" --body "file path 2" --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+    {
+    "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+    "VersionId": "xNQC4pIgMYx59digj5.gk15WC4efOOa"
+    }
+
+```
+
+Now, we can list the versions of the object.
+
+```
+aws s3api list-object-versions --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+    {
+    "Versions": [
+        {
+            "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+            "Size": 13,
+            "StorageClass": "STANDARD",
+            "Key": "test-key-1",
+            "VersionId": "xNQC4pIgMYx59digj5.gk15WC4efOOa",
+            "IsLatest": true,
+            "LastModified": "2020-05-18T10:34:05.072Z",
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "user$tenant"
+            }
+        },
+        {
+            "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+            "Size": 13,
+            "StorageClass": "STANDARD",
+            "Key": "test-key-1",
+            "VersionId": "KdS5Yl0d06bBSYriIddtVb0h5gofiNX",
+            "IsLatest": false,
+            "LastModified": "2020-05-18T10:33:53.066Z",
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "user$tenant"
+            }
+        }
+    ]
+    }
+
+```
+
+### [Retrieve an Object](#retrieve-an-object)
+
+For a non-versioned bucket, object lookup always returns the most recent available object. In a versioned bucket, the search returns the current version of the object:
+
+```
+aws s3api list-object-versions --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+    {
+    "Versions": [
+        {
+            "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+            "Size": 13,
+            "StorageClass": "STANDARD",
+            "Key": "test-key-1",
+            "VersionId": "xNQC4pIgMYx59digj5.gk15WC4efOOa",
+            "IsLatest": true,
+            "LastModified": "2020-05-18T10:34:05.072Z",
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "user$tenant"
+            }
+        },
+        {
+            "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+            "Size": 13,
+            "StorageClass": "STANDARD",
+            "Key": "test-key-1",
+            "VersionId": "KdS5Yl0d06bBSYriIddtVb0h5gofiNX",
+            "IsLatest": false,
+            "LastModified": "2020-05-18T10:33:53.066Z",
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "user$tenant"
+            }
+        }
+    ]
+    }
+
+```
+
+Now, we can retrieve desired object.
+
+```
+aws s3api get-object --key "file name" "file name.out" --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+    {
+    "AcceptRanges": "bytes",
+    "LastModified": "Mon, 18 May 2020 10:34:05 GMT",
+    "ContentLength": 13,
+    "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+    "VersionId": "xNQC4pIgMYx59digj5.gk15WC4efOOa",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+    }
+
+```
+
+In a versioned bucket, inactive objects can be retrieved by specifying the Version ID:
+
+```
+aws s3api list-object-versions --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+    {
+    "Versions": [
+        {
+            "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+            "Size": 13,
+            "StorageClass": "STANDARD",
+            "Key": "test-key-1",
+            "VersionId": "xNQC4pIgMYx59digj5.gk15WC4efOOa",
+            "IsLatest": true,
+            "LastModified": "2020-05-18T10:34:05.072Z",
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "user$tenant"
+            }
+        },
+        {
+            "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+            "Size": 13,
+            "StorageClass": "STANDARD",
+            "Key": "test-key-1",
+            "VersionId": "KdS5Yl0d06bBSYriIddtVb0h5gofiNX",
+            "IsLatest": false,
+            "LastModified": "2020-05-18T10:33:53.066Z",
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "user$tenant"
+            }
+        }
+    ]
+    }
+
+```
+
+Now we can list the particular version.
+
+```
+aws s3api list-object-versions --bucket "bucket name" --version-id KdS5Yl0d06bBSYriIddtVb0h5gofiNX --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+    {
+    "AcceptRanges": "bytes",
+    "LastModified": "Mon, 18 May 2020 10:33:53 GMT",
+    "ContentLength": 13,
+    "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+    "VersionId": "KdS5Yl0d06bBSYriIddtVb0h5gofiNX",
+    "ContentType": "binary/octet-stream",
+    "Metadata": {}
+    }
+
+```
+
+### [Object Removal](#object-removal)
+
+In a non-versioned bucket, the object is permanently deleted and cannot be recovered. In a versioned bucket, all versions remain in the bucket, and RGW adds a delete flag, which becomes the current version:
+
+```
+aws s3api list-object-versions --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+    {
+    "Versions": [
+        {
+            "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+            "Size": 13,
+            "StorageClass": "STANDARD",
+            "Key": "test-key-1",
+            "VersionId": "xNQC4pIgMYx59digj5.gk15WC4efOOa",
+            "IsLatest": true,
+            "LastModified": "2020-05-18T10:34:05.072Z",
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "user$tenant"
+            }
+        },
+
+```
+
+Now we can check the object versions again.
+
+```
+aws s3api list-object-versions --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+    {
+    "Versions": [
+        {
+            "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+            "Size": 13,
+            "StorageClass": "STANDARD",
+            "Key": "test-key-1",
+            "VersionId": "xNQC4pIgMYx59digj5.gk15WC4efOOa",
+            "IsLatest": false,
+            "LastModified": "2020-05-18T10:34:05.072Z",
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "user$tenant"
+            }
+        }
+    ],
+    "DeleteMarkers": [
+        {
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "user$tenant"
+            },
+            "Key": "test-key-1",
+            "VersionId": "hxV8on0vry4Oz0FNcgsz88aDcQoZO.y",
+            "IsLatest": true,
+            "LastModified": "2020-05-18T11:21:57.544Z"
+        }
+    ]
+    }
+
+```
+
+In the case of a versioned bucket, if an object with a specific VersionID is deleted, it is permanently removed:
+
+```
+aws s3api delete-object --key "file name" --version-id KdS5Yl0d06bBSYriIddtVb0h5gofiNX --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+    {
+    "VersionId": "KdS5Yl0d06bBSYriIddtVb0h5gofiNX"
+    }
+
+```
+
+Now we can check the object versions again.
+
+```
+aws s3api list-object-versions --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+    {
+    "DeleteMarkers": [
+        {
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "user$tenant"
+            },
+            "Key": "test-key-1",
+            "VersionId": "ZfT16FPCe2xVMjTh-6qqfUzhQnLQMfg",
+            "IsLatest": true,
+            "LastModified": "2020-05-18T11:22:48.482Z"
+        },
+
+    }
+
+```
+
+### [Object Restoration](#object-restoration)
+
+To restore an object, the recommended approach is to copy the previous version of the object to the same bucket. The copied object will become the current version, while all other versions of the object are preserved:
+
+```
+aws s3api list-object-versions --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+
+    {
+    "Versions": [
+        {
+            "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+            "Size": 13,
+            "StorageClass": "STANDARD",
+            "Key": "test-key-1",
+            "VersionId": "xNQC4pIgMYx59digj5.gk15WC4efOOa",
+            "IsLatest": false,
+            "LastModified": "2020-05-18T10:34:05.072Z",
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "user$tenant"
+            }
+        }
+    ],
+    "DeleteMarkers": [
+        {
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "user$tenant"
+            },
+            "Key": "test-key-1",
+            "VersionId": "hxV8on0vry4Oz0FNcgsz88aDcQoZO.y",
+            "IsLatest": true,
+            "LastModified": "2020-05-18T11:21:57.544Z"
+        }
+    ]
+    }
+
+```
+
+Now we can restore the particular version of the object.
+
+```
+aws s3api copy-object --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz --copy-source "bucket name"/"file name"?versionId=xNQC4pIgMYx59digj5.gk15WC4efOOa --key "file name"
+
+    {
+    "CopyObjectResult": {
+        "ETag": "5ec0f1a7fc3a60bf9360a738973f014d",
+        "LastModified": "2020-05-18T13:28:52.553Z"
+    }
+    }
+
+```
+
+And check the object versions.
+
+```
+aws s3api list-object-versions --bucket "bucket name" --profile "profil name" --endpoint-url=https://s3.cl2.du.cesnet.cz
+    {
+    "Versions": [
+           {
+            "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+            "Size": 13,
+            "StorageClass": "STANDARD",
+            "Key": "test-key-1",
+            "VersionId": "EYXgE1z-28VkVS4zTD55SetB7Wdwk1V",
+            "IsLatest": true,
+            "LastModified": "2020-05-18T13:28:52.553Z",
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "strnad$strnad"
+            }
+        },
+        {
+            "ETag": "\"5ec0f1a7fc3a60bf9360a738973f014d\"",
+            "Size": 13,
+            "StorageClass": "STANDARD",
+            "Key": "test-key-1",
+            "VersionId": "xNQC4pIgMYx59digj5.gk15WC4efOOa",
+            "IsLatest": false,
+            "LastModified": "2020-05-18T10:34:05.072Z",
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "user$tenant"
+            }
+        }
+    ],
+    "DeleteMarkers": [
+        {
+            "Owner": {
+                "DisplayName": "Testing",
+                "ID": "user$tenant"
+            },
+            "Key": "test-key-1",
+            "VersionId": "hxV8on0vry4Oz0FNcgsz88aDcQoZO.y",
+            "IsLatest": false,
+            "LastModified": "2020-05-18T11:21:57.544Z"
+        }
+    ]
+    }
+
+```
+
+## [Set Up Bucket Policies for Sharing (AWS-CLI S3 plugin)](#set-up-bucket-policies-for-sharing-aws-cli-s3-plugin)
+
+The **[aws-plugin-bucket-policy](https://github.com/CESNET/aws-plugin-bucket-policy)** plugin is a cli tool for generating and setting bucket policies.
+
+⚠️
+Before installing the plugin, install and configure the **[AWS tool](./aws-cli)**.
+
+### [Plugin installation aws-plugin-bucket-policy](#plugin-installation-aws-plugin-bucket-policy)
+
+```
+pip install --upgrade pip setuptools awscli aws-plugin-bucket-policy awscli_plugin_endpoint
+
+```
+
+### [Plugin and endpoint configuration](#plugin-and-endpoint-configuration)
+
+In the configuration file `/home/your-username/.aws/config`, add the missing settings to the profile
+
+```
+[profile test_user]
+output = text
+s3 =
+endpoint_url = https://s3.cl4.du.cesnet.cz
+s3api =
+endpoint_url = https://s3.cl4.du.cesnet.cz
+s3bucket-policy =
+endpoint_url = https://s3.cl4.du.cesnet.cz
+
+[plugins]
+s3bucket-policy = aws_plugin_bucket_policy
+endpoint = awscli_plugin_endpoint
+
+```
+
+### [Creating a bucket policy for sharing a bucket](#creating-a-bucket-policy-for-sharing-a-bucket)
+
+⚠️
+Only the bucket owner can modify policies!
+
+The group identifier can be obtained from the [Gatekeeper service](https://gatekeeper.du.cesnet.cz/).
+In the following image:
+A – Group/Tenant ID
+B – User ID
+
+If access credentials were provided to you, the Tenant ID is included in the user field before the dollar sign ($).
+
+![GK-group_info](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2FGK-group_info.0ns273_-glc40.jpg&w=3840&q=75)
+
+Before modifying the bucket policy settings, check whether a policy is already configured
+
+```
+aws s3bucket-policy --profile test_user get-policy --bucket your-bucket
+
+```
+
+⚠️
+If a bucket policy already exists, it will be overwritten.
+
+Creating a shared folder for a tenant
+
+```
+aws s3bucket-policy --profile test_user new-policy --bucket your-bucket --newpol-type share-w-tenant --newpol-spec tenant=c6efffff_1581_hhhh_879d_1616agtgtgtg,action=rw
+
+```
+
+Command output:
+
+```
+Bucket "your-bucket" old policy: No policy defined
+---
+Bucket "your-bucket" new policy:
+{
+  "Id": "policy-260115-150636-1111",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "statement-260114-150636-6251",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": [
+          "c6efffff_1581_hhhh_879d_1616agtgtgtg"
+        ]
+      },
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::your-bucket",
+        "arn:aws:s3:::your-bucket/*"
+      ]
+    }
+  ]
+}
+....
+
+```
+
+Creating a shared folder with a user
+
+```
+aws s3bucket-policy --profile test_user new-policy --bucket your-bucket --newpol-type share-w-user --newpol-spec tenant=c6efffff_1581_hhhh_879d_1616agtgtgtg,user=62cbgbgbgbgbg03aa144c327279eenhnhnhnhnhe,action=rw
+
+```
+
+Command output:
+
+```
+Bucket "your-bucket" old policy: No policy defined
+---
+Bucket "your-bucket" new policy:
+{
+  "Id": "policy-260114-151333-4614",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "statement-260114-151333-1193",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": [
+          "arn:aws:iam::c6efffff_1581_hhhh_879d_1616agtgtgtg:user/ahhhhhhhhhha554c0206319caa7mnmnmnmnmn0ea",
+          "arn:aws:iam::c6efffff_1581_hhhh_879d_1616agtgtgtg:user/62cbgbgbgbgbg03aa144c327279eenhnhnhnhnhe"
+        ]
+      },
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::your-bucket",
+        "arn:aws:s3:::your-bucket/*"
+      ]
+    }
+  ]
+}
+
+```
+
+Creating a shared folder with a user who has write permissions, while also configuring sharing for a second user with read-only access.
+
+```
+aws s3bucket-policy --profile test_user new-policy --bucket your-bucket --newpol-type share-w-user --newpol-spec tenant=5fd7687c_9874_497d_bb99_6ebb56987e23,user=62bgtsrdjhrd203aa144c32725dr9v3fldtds79e,action=rw user=62c159778887203rt144c327279ee0854f96d79f,action=ro
+
+```
+
+```
+Bucket "your-bucket" new policy:
+{
+  "Id": "policy-260128-134711-5519",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "statement-260128-134711-7294",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": [
+          "arn:aws:iam::5fd7687c_9874_497d_bb99_6ebb56987e23:user/62bgtsrdjhrd203aa144c32725dr9v3fldtds79e",
+          "arn:aws:iam::5fd7687c_9874_497d_bb99_6ebb56987e23:user/62c159778887203rt144c327279ee0854f96d79e"
+        ]
+      },
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::your-bucket",
+        "arn:aws:s3:::your-bucket/*"
+      ]
+    },
+    {
+      "Sid": "statement-260128-134711-6339",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": [
+          "arn:aws:iam::5fd7687c_9874_497d_bb99_6ebb56987e23:user/62c159778887203aa144c327279ee0854f96d79f"
+        ]
+      },
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::your-bucket",
+        "arn:aws:s3:::your-bucket/*"
+      ]
+    }
+  ]
+}
+
+```
+
+For creating more complex bucket policies, the `--dryrun` switch can be used. It outputs the configuration without applying it. The resulting summarized bucket policy configuration can then be created and applied using JSON.
+
+Additional **[examples](https://github.com/CESNET/aws-plugin-bucket-policy/blob/main/README.md##examples)** and **[command reference](https://github.com/CESNET/aws-plugin-bucket-policy/blob/main/docs/commands.md)**
+
+If more advanced bucket policy configuration is required, please contact `du-support@cesnet.cz`.
+
+### On this page
+[Sharing an S3 Object Using (Presigned) URL](#sharing-an-s3-object-using-presigned-url)[S3 Object Versioning](#s3-object-versioning)[Bucket Versioning](#bucket-versioning)[Adding an Object](#adding-an-object)[Retrieve an Object](#retrieve-an-object)[Object Removal](#object-removal)[Object Restoration](#object-restoration)[Set Up Bucket Policies for Sharing (AWS-CLI S3 plugin)](#set-up-bucket-policies-for-sharing-aws-cli-s3-plugin)[Plugin installation aws-plugin-bucket-policy](#plugin-installation-aws-plugin-bucket-policy)[Plugin and endpoint configuration](#plugin-and-endpoint-configuration)[Creating a bucket policy for sharing a bucket](#creating-a-bucket-policy-for-sharing-a-bucket)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)

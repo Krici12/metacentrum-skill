@@ -1,0 +1,311 @@
+#
+
+## [Welcome to MetaCentrum](#welcome-to-metacentrum)
+
+MetaCentrum provides free computing resources to Czech academic institutions through distributed compute clusters.
+
+New users unfamiliar with grid computing environments often have questions. Please [contact user support](../support) if you need help - we’re here for you, and your feedback helps us improve the documentation.
+
+Before getting started, you need an active MetaCentrum account (see [Account guide](../access/account)).
+
+Take a look at our latest [hands-on tutorials](https://github.com/CESNET/metacentrum-hands-on) for beginners, which contain lots of useful tips.
+
+## [Getting started: Logging in](#getting-started-logging-in)
+
+Once you have an activated account, connect to MetaCentrum using SSH with your username. Here we are using the `tarkil.metacentrum.cz` login server (frontend). You can use any frontend, but we recommend choosing the one closest to your physical location to minimise network latency.
+
+```
+ssh your_username@tarkil.metacentrum.cz
+
+```
+
+For the full list of frontends, their locations, and detailed login instructions (including Windows/PuTTY), see the [Log in guide](../access/log-in).
+
+## [Understanding the architecture](#understanding-the-architecture)
+
+MetaCentrum distributed ecosystem consists of **compute clusters** (or “compute nodes”, where the high performance computing itself is done), **storage servers** (a space for user data where users’ home directories are) and **frontends** (nodes dedicated for logging in).
+
+The operating system used within MetaCentrum is Debian Linux. The system you will interact with for scheduling jobs is [Portable Batch System](https://en.wikipedia.org/wiki/Portable_Batch_System) (PBS).
+
+Each frontend has a native home directory on a storage server. After logging in, you can access any storage from a given frontend. Every compute node has a fast local disk, usually referred to as [scratch](../computing/infrastructure/scratch-storages).
+
+Frontends are shared by all users and are **not** intended for heavy computing. Use them only for data preparation, job management, or light compiling.
+
+For detailed infrastructure information, see [Frontend & Storage guide](../computing/infrastructure/frontend-storage).
+
+## [Running your first job](#running-your-first-job)
+
+This tutorial will guide you through the process of running a simple Python script on a compute node.
+
+Make sure to replace `myuser` with your username. In the bash commands, the `$` sign is used to indicate the command prompt, while the `>` sign is used to indicate the output of the command.
+
+### [1. Input data](#1-input-data)
+
+Copy a **small** input file from your local computer to your *home* directory via the chosen frontend (e.g., *tarkil*).
+
+You can read more about handling large files in the [Data guide](../data/large-data) section.
+
+```
+user123@home_PC:~$ scp myfile.txt myuser@tarkil.metacentrum.cz:~
+> myuser@tarkil.metacentrum.cz's password:
+> myfile.txt          100%     10     2.9KB/s    00:00
+
+```
+
+### [2. Log In](#2-log-in)
+
+Log in to the frontend server via *ssh*.
+
+```
+user123@home_PC:~$ ssh myuser@tarkil.metacentrum.cz
+> myuser@tarkil.metacentrum.cz's password:
+
+```
+
+### [3. Prepare a Python script](#3-prepare-a-python-script)
+
+Prepare a simple Python script that reads the input file and writes the number of lines to the output file.
+
+Either create it using *vim* or *nano* directly in your *home*, or copy it from your local computer. Save the script as `counter.py`:
+
+```
+import sys
+
+infile = sys.argv[1]
+outfile = sys.argv[2]
+
+with open(infile, "r", encoding="utf-8") as f:
+    line_count = sum(1 for _ in f)
+with open(outfile, "w", encoding="utf-8") as f:
+    f.write(str(line_count))
+
+```
+
+Decide whether you want to run your job as a batch job or in interactive mode.
+
+**Batch job**: Non-interactive: submit the script, and it will run independently (primary choice for grid computing).
+
+**Interactive job**: Reserve resources, then work interactively (useful for testing, compiling, running [GUI apps](../software/graphical-access)).
+
+### [4. (A) Run as a batch job](#4-a-run-as-a-batch-job)
+
+In your *home* prepare a shell script, which:
+
+- specifies the requested resources for PBS
+
+- names the job *my_counter*
+
+- loads Python module
+
+- copies the script and its inputs to `scratch` (fast disk local to the machine)
+
+- calls a Python script and passes the input file to it
+
+- copies the output from scratch to the *home* directory
+
+- cleans up the scratch
+
+The script is saved as `test.sh`:
+
+```
+#!/bin/bash
+
+# run the job for a max of 30 minutes
+#PBS -l walltime=0:30:00
+
+# reserve 1 CPU, 1 GB disc space and 1 GB RAM
+#PBS -l select=1:ncpus=1:mem=1gb:scratch_local=1gb
+
+# name of the job (not necessary)
+#PBS -N my_counter
+
+# name a job info file
+infofile=job_info.${PBS_JOBID}
+
+# load the python module
+module load python
+
+# copy the files to the scratch directory
+cp ${PBS_O_WORKDIR}/myfile.txt $SCRATCHDIR
+cp ${PBS_O_WORKDIR}/counter.py} $SCRATCHDIR
+
+# go to the scratchdir
+cd ${SCRATCHDIR}
+
+# create the job info file
+touch ${infofile}
+
+# save a basic info about the job
+echo -e "Hello world at `date` from user ${USER}!\n" >> ${infofile}
+echo -e "$PBS_JOBID is running on node `hostname -f` in a scratch directory $SCRATCHDIR\n" >> ${infofile}
+
+python counter.py myfile.txt out_count.txt
+
+# copy the outputs back to where qsub was called
+cp ${infofile} ${PBS_O_WORKDIR}/
+cp out_count.txt ${PBS_O_WORKDIR}/
+
+# apply a scratch automatic cleanup utility
+clean_scratch
+
+```
+
+Submit the job to PBS and check its status (`Q`=queued, `R`=running, `F`=finished).
+
+Some useful PBS commands for managing jobs are `qstat -u username` (lists your running and queuing jobs), `qstat -x -u username` (lists your running, queuing and finished jobs) and
+`qdel jobID` (deletes a job).
+
+```
+myuser@tarkil:~$ qsub test.sh
+> 18411451.pbs-m1.metacentrum.cz
+myuser@tarkil:~$ qstat -xu myuser
+> Job ID          Name      User    S
+  -----------  ----------  ------   -
+  18411451...  my_counter  myuser   R
+
+```
+
+When the job finishes, you can inspect the standard output and error files in the directory from where the job was submitted.
+
+- `jobname.o<jobID>` – standard output (*STDOUT*).
+
+- `jobname.e<jobID>` – standard error output (*STDERR*) – check here first if a job fails.
+
+When the job finishes, in your *home* you can inspect the standard output and error files and the output files, which were created by the job.
+
+```
+myuser@tarkil:~$ ls
+> 18411451.pbs-m1.metacentrum.cz  counter.py  my_counter.o18411451  my_counter.e18411451  out_count.txt  test.sh
+
+```
+
+- `my_counter.o18411451` (default file with standard output)
+
+- `my_counter.e18411451` (default file with standard error; empty unless the job logged errors)
+
+- `18411451.pbs-m1.metacentrum.cz` (output file with job info your batch script has explicitly created)
+
+- `out_count.txt` (output file created by the Python script with the number of lines in the input file written to it)
+
+```
+myuser@tarkil:~$ cat out_count.txt
+> 11
+
+```
+
+### [5. (B) Run as an interactive job](#5-b-run-as-an-interactive-job)
+
+As an alternative, you can run a very similar job interactively.
+
+Request resources for the interactive job:
+
+```
+myuser@tarkil:~$ qsub -I -l walltime=00:30:00 -l select=1:ncpus=1:mem=1gb:scratch_local=1gb
+
+```
+
+Wait for the job to start – you will be moved to one of the compute nodes, where you can inspect the new environment.
+
+```
+> qsub: waiting for job 18359645.pbs-m1.metacentrum.cz to start
+> qsub: job 18359645.pbs-m1.metacentrum.cz ready
+
+myuser@tarkil16:~$ hostname
+> tarkil16.grid.cesnet.cz
+myuser@tarkil16:~$ echo $SCRATCHDIR
+> /scratch/myuser/job_18359645.pbs-m1
+myuser@tarkil16:~$ pwd
+> /storage/praha1/home/myuser
+
+```
+
+Run the commands specified in the batch job (load Python module and copy the files to the scratch directory) and enter the scratch directory.
+
+```
+myuser@tarkil16:~$ module load python
+myuser@tarkil16:~$ cp ${PBS_O_WORKDIR}/counter.py $SCRATCHDIR
+myuser@tarkil16:~$ cp ${PBS_O_WORKDIR}/myfile.txt $SCRATCHDIR
+myuser@tarkil16:~$ cd $SCRATCHDIR
+
+```
+
+Call the Python script with the input file and let it count the lines.
+
+```
+myuser@tarkil16:~$ python counter.py myfile.txt out_count.txt
+myuser@tarkil16:~$ cat out_count.txt
+> 11
+
+```
+
+Copy the output file back to where *qsub* was run (your *home*) and clean the scratch.
+
+```
+myuser@tarkil16:~$ cp out_count.txt ${PBS_O_WORKDIR}/
+myuser@tarkil16:~$ clean_scratch
+
+```
+
+## [Account maintenance](#account-maintenance)
+
+**Renewal**: Accounts expire February 2nd. You’ll be notified by email.
+
+**Security**: Use a strong password and never share credentials. For password changes and complete security rules, see [Account page](../access/account) and [Terms and conditions](../access/terms).
+
+## [Software modules](#software-modules)
+
+Software in MetaCentrum is installed in so-called **modules**. To be able to use software, you have to load it first by `module add`.
+
+```
+module avail amber/       # list existing versions of "amber" module
+module add amber          # load default version of amber
+module list               # show loaded modules
+
+```
+
+Module search
+
+You can use wildcards to search: `module avail *python*`. Add `/` to see versions within a module directory.
+
+## [Next steps](#next-steps)
+
+Now that you understand the basics, you can:
+
+- See a visual tool for assembling qsub commands, the [Qsub assembler](./resources/qsub-compiler)
+
+- Learn [advanced job configuration and troubleshooting](./advanced)
+
+- Explore [available software](../software/alphabet)
+
+- Read about [parallel computing](./parallel-comput)
+
+- Check [GPU resources](./gpu-comput/gpu-job)
+
+- Try usegalaxy.cz [web interface](../graphical/usegalaxy) – an alternative way to run jobs in a web-based platform with workflow support.
+
+## [Troubleshooting basics](#troubleshooting-basics)
+
+If your job fails:
+
+- Check the error file (`*.e<jobID>`).
+
+- Verify your input files exist and have the correct permissions.
+
+- Check if software modules are loaded correctly.
+
+- Ensure you requested adequate resources (memory, walltime, scratch).
+
+For more advanced troubleshooting, see the [Advanced guide](./advanced).
+
+## [Acknowledgements](#acknowledgements)
+
+Publications created with MetaCentrum support must be submitted to the [publications system](https://publications.e-infra.cz/all-publications) and acknowledged.
+
+See [Terms and conditions](../access/terms) for an up-to-date acknowledgement wording.
+
+![publicity banner](/_next/static/media/einfra_meta-zapati.0m5s8338yq376.svg)
+
+### On this page
+[Welcome to MetaCentrum](#welcome-to-metacentrum)[Getting started: Logging in](#getting-started-logging-in)[Understanding the architecture](#understanding-the-architecture)[Running your first job](#running-your-first-job)[1. Input data](#1-input-data)[2. Log In](#2-log-in)[3. Prepare a Python script](#3-prepare-a-python-script)[4. (A) Run as a batch job](#4-a-run-as-a-batch-job)[5. (B) Run as an interactive job](#5-b-run-as-an-interactive-job)[Account maintenance](#account-maintenance)[Software modules](#software-modules)[Next steps](#next-steps)[Troubleshooting basics](#troubleshooting-basics)[Acknowledgements](#acknowledgements)
+
+![einfra banner](/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fheader03.0ikyctvi6x5ki.png&w=384&q=75)
