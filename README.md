@@ -5,8 +5,21 @@ určený jako strojově čitelná referenční příručka (pracovní podklad pr
 LLM agenty a re-scrapování a diffování přes git).
 
 - **naposledy scrapnuto:** 2026-09-10
-- **licence obsahu:** viz `SCRAPING.md` (obsah pochází z veřejné dokumentace e-INFRA CZ)
 - **zdroje:** [docs.e-infra.cz](https://docs.e-infra.cz) a návazné dokumentační weby e-INFRA CZ
+
+## Autorství a licence obsahu
+
+Skill v `.claude/skills/metacentrum/` je původní, ručně psaný kondenzát.
+
+Obsah `raw/` je **zrcadlem veřejné dokumentace** provozované CESNET / MetaCentrum /
+CERIT-SC ([docs.e-infra.cz](https://docs.e-infra.cz),
+[docs.metacentrum.cz](https://docs.metacentrum.cz),
+[docs.cerit.io](https://docs.cerit.io),
+[docs.du.cesnet.cz](https://docs.du.cesnet.cz),
+[docs.account.e-infra.cz](https://docs.account.e-infra.cz)) — slouží jen pro
+vlastní strojově čitelné použití a sledování změn. **Není naším dílem**;
+autorská práva patří příslušným provozovatelům. Pokud jste provozovatel a máte
+námitky proti zrcadlení, otevřete issue.
 
 ## Co tu je
 
